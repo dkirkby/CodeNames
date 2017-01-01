@@ -16,6 +16,8 @@ def main():
     parser = argparse.ArgumentParser(
         description='Merge training corpus.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-i', '--input', type=str, default='words.txt',
+                        help='Name of word list to use.')
     parser.add_argument('-o', '--output', type=str, default='corpus.txt.gz',
                         help='Name of merged corpus to write.')
     parser.add_argument('--encoding', type=str, default='utf8',
@@ -25,7 +27,23 @@ def main():
     args = parser.parse_args()
 
     heading = re.compile('=+ [^=]+ =+\s*')
-    punctuation = (',', ';', ':', '.', '!', '?', '(', ')', '[', ']', '``', "''")
+    punctuation = (',', ';', ':', '.', '!', '?', '-', '%', '&', '$',
+                   '(', ')', '[', ']', '{', '}', '``', "''")
+
+    # Read the word list and find any compound words since they must be
+    # treated as a single word during the learning step.
+    compound = {}
+    word_count = {}
+    with open(args.input, 'r') as f:
+        for word in f:
+            word = word.strip().lower()
+            if ' ' in word:
+                compound[word] = word.replace(' ', '_')
+                word_count[compound[word]] = 0
+            else:
+                word_count[word] = 0
+    print('Wordlist contains {0} compound words:'.format(len(compound)))
+    print(compound.keys())
 
     all_sentences = []
     last_count = 0
@@ -48,7 +66,16 @@ def main():
                     if token in punctuation:
                         continue
                     words.append(token.lower())
-                all_sentences.append(' '.join(words))
+                line = ' '.join(words)
+                # Replace ' ' with '_' in compound words.
+                for w in compound:
+                    line = line.replace(w, compound[w])
+                # Update wordlist frequencies.
+                for w in line.split():
+                    if w in word_count:
+                        word_count[w] += 1
+                # Add this sentence to the corpus.
+                all_sentences.append(line)
 
         print('{0:5d} {1}'.format(len(all_sentences) - last_count, topic_name))
         last_count = len(all_sentences)
@@ -63,6 +90,11 @@ def main():
             f.write(all_sentences[i] + '\n')
 
     print('Saved {0} sentences to {1}.'.format(last_count, args.output))
+
+    # Print wordlist frequencies in decreasing order.
+    for w in sorted(word_count, key=word_count.get, reverse=True):
+        print('{0:5d} {1}'.format(word_count[w], w))
+
 
 if __name__ == '__main__':
     main()

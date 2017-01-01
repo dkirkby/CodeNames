@@ -25,24 +25,33 @@ def main():
     print('Read {0} words from {1}.'.format(len(words), args.input))
 
     for word in words:
-        if word < 'Head': continue
+        titles = set()
+        ##if word < 'Himalayas': continue
         print(word)
+
+        # Look for a disambiguation page on this topic that lists pages
+        # related to different meanings.
         try:
-            # Look for a disambiguation page on this topic.
             page = wikipedia.page(
                 word + ' (disambiguation)', preload=False,
                 redirect=True, auto_suggest=False)
             # Assume that we have re-directed to a non-disambiguation page
             # if we get here (ie, with no DisambiguationError raised).
-            titles = [page.title]
+            titles.add(page.title)
         except wikipedia.exceptions.PageError as e:
             # Disambiguation page does not exist and does not redirect
             # so assume that there is a unique topic page.
             print('-> unique topic page')
-            titles = [unicode(word)]
+            titles.add(unicode(word))
         except wikipedia.exceptions.DisambiguationError as e:
             # Record the list of pages related to this topic.
-            titles = e.options
+            titles |= set(e.options)
+
+        # Do a search on this topic and add any new page titles it finds.
+        try:
+            titles |= set(wikipedia.search(word))
+        except Exception as e:
+            print('->' + str(e))
 
         num_pages = 0
         out_name = os.path.join('corpus', word + '.txt')
@@ -61,7 +70,7 @@ def main():
                     # Skip second-level ambiguous topics.
                     print('.. ambiguous')
                 except Exception as e:
-                    print('!! ' + str(e))
+                    print('!!' + str(e))
             print('  saved {0} pages to {1}'.format(num_pages, out_name))
 
 

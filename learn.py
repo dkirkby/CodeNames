@@ -13,12 +13,14 @@ def main():
     parser.add_argument('-i', '--input', type=str, default='corpus.txt.gz',
                         help='Name of merged corpus to read.')
     parser.add_argument('-o', '--output', type=str, default='word2vec.dat',
-                        help='Name of merged corpus to read.')
-    parser.add_argument('--dimension', type=int, default=100,
+                        help='File name for saved model.')
+    parser.add_argument('-n', '--num-epochs', type=int, default=10,
+                        help='Number of training epochs to run.')
+    parser.add_argument('--dimension', type=int, default=300,
                         help='Dimension of word vectors to learn.')
-    parser.add_argument('--min-count', type=int, default=5,
+    parser.add_argument('--min-count', type=int, default=8,
                         help='Ignore words with fewer occurences.')
-    parser.add_argument('--max-distance', type=int, default=5,
+    parser.add_argument('--max-distance', type=int, default=10,
                         help='Max distance between words within a sentence')
     parser.add_argument('--workers', type=int, default=4,
                         help='Number of workers to distribute workload across.')
@@ -45,7 +47,8 @@ def main():
     # Train the model.
     model = gensim.models.word2vec.Word2Vec(
         sentences, size=args.dimension, window=args.max_distance,
-        min_count=args.min_count, workers=args.workers)
+        min_count=args.min_count, workers=args.workers,
+        sg=1, iter=args.num_epochs)
 
     # Save the model in a format suitable for further training.
     model.save(args.output)

@@ -16,6 +16,8 @@ def main():
                         help='File name for saved model.')
     parser.add_argument('-n', '--num-epochs', type=int, default=10,
                         help='Number of training epochs to run.')
+    parser.add_argument('--improve', action='store_true',
+                        help='Continue to improve learning.')
     parser.add_argument('--dimension', type=int, default=300,
                         help='Dimension of word vectors to learn.')
     parser.add_argument('--min-count', type=int, default=45,
@@ -44,14 +46,25 @@ def main():
     # Read the training sentences.
     sentences = gensim.models.word2vec.LineSentence(args.input)
 
-    # Train the model.
-    model = gensim.models.word2vec.Word2Vec(
-        sentences, size=args.dimension, window=args.max_distance,
-        min_count=args.min_count, workers=args.workers,
-        sg=1, hs=1, iter=args.num_epochs)
+    if args.improve:
+        # Load a previously trained model.
+        model = gensim.models.word2vec.Word2Vec.load(args.output)
+        # Remove the input suffix, if any.
+        suffix = '.{0}'.format(model.iter)
+        if args.output.endswith(suffix):
+            args.output = args.output[:-len(suffix)]
+        # Continue training.
+        model.train(sentences)
+    else:
+        # Train a new model.
+        model = gensim.models.word2vec.Word2Vec(
+            sentences, size=args.dimension, window=args.max_distance,
+            min_count=args.min_count, workers=args.workers,
+            sg=1, hs=1, iter=args.num_epochs)
 
     # Save the model in a format suitable for further training.
-    model.save(args.output)
+    save_name = '{0}.{1}'.format(args.output, model.iter)
+    model.save(save_name)
 
 
 if __name__ == '__main__':

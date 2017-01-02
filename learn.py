@@ -18,7 +18,7 @@ def main():
                         help='Number of training epochs to run.')
     parser.add_argument('--dimension', type=int, default=300,
                         help='Dimension of word vectors to learn.')
-    parser.add_argument('--min-count', type=int, default=8,
+    parser.add_argument('--min-count', type=int, default=45,
                         help='Ignore words with fewer occurences.')
     parser.add_argument('--max-distance', type=int, default=10,
                         help='Max distance between words within a sentence')
@@ -48,7 +48,7 @@ def main():
     model = gensim.models.word2vec.Word2Vec(
         sentences, size=args.dimension, window=args.max_distance,
         min_count=args.min_count, workers=args.workers,
-        sg=1, iter=args.num_epochs)
+        sg=1, hs=1, iter=args.num_epochs)
 
     # Save the model in a format suitable for further training.
     model.save(args.output)

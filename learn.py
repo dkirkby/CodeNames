@@ -49,8 +49,11 @@ def main():
     if args.improve:
         # Load a previously trained model.
         model = gensim.models.word2vec.Word2Vec.load(args.output)
+        # Update parameters.
+        model.workers = args.workers
+        model.iter = args.num_epochs
         # Remove the input suffix, if any.
-        suffix = '.{0}'.format(model.iter)
+        suffix = '.{0}'.format(model.train_count)
         if args.output.endswith(suffix):
             args.output = args.output[:-len(suffix)]
         # Continue training.
@@ -63,7 +66,7 @@ def main():
             sg=1, hs=1, iter=args.num_epochs)
 
     # Save the model in a format suitable for further training.
-    save_name = '{0}.{1}'.format(args.output, model.iter)
+    save_name = '{0}.{1}'.format(args.output, model.train_count)
     model.save(save_name)
 
 

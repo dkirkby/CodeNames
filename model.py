@@ -71,4 +71,8 @@ class WordEmbedding(object):
         Return the best (word, score) clues for the specified words that
         are not similar to any of the specified vetos.
         """
+        # Special handling for the word "march" which the embedding has trouble with.
+        if len(words) > 1 and 'march' in words:
+            return []
+        
         return self.filter_clues(self.model.most_similar(words, topn=10), vetos)

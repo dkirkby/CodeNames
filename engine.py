@@ -36,7 +36,8 @@ class GameEngine(object):
         self.size = size
 
         # Shuffle the wordlist.
-        shuffle = self.generator.choice(len(self.words), size * size)
+        shuffle = self.generator.choice(
+            len(self.words), size * size, replace=False)
         self.board = self.words[shuffle]
 
         # Specify the layout for this game.
@@ -72,7 +73,7 @@ class GameEngine(object):
             sys.stdout.write('\n')
 
 
-    def play_computer_spymaster(self, threshold=0.55):
+    def play_computer_spymaster(self, threshold=0.55, verbose=True):
 
         self.print_board(spymaster=True)
 
@@ -84,15 +85,28 @@ class GameEngine(object):
 
         # Loop over all permutations of words.
         num_words = len(player_words)
+        best_score, saved_clues = [], []
         for count in range(num_words, 0, -1):
+            # Multiply similarity scores by this factor for any clue
+            # corresponding to this many words.
+            bonus_factor = count ** 0.25
             for group in itertools.combinations(range(num_words), count):
                 words = player_words[list(group)]
                 clues = self.model.get_clues(words, visible_words)
                 if clues:
-                    best = clues[0]
-                    print('{0:.3f} {1} = {2}'.format(
-                            best[1], ' + '.join([w.upper() for w in words]),
-                            best[0]))
+                    best_score.append(clues[0][1] * bonus_factor)
+                    saved_clues.append((clues[0][0], words))
+        num_clues = len(saved_clues)
+        order = sorted(xrange(num_clues),
+                       key=lambda k: best_score[k], reverse=True)
+        if verbose:
+            for i in order[:10]:
+                clue, words = saved_clues[i]
+                print('{0:.3f} {1} = {2}'.format(
+                    best_score[i], ' + '.join([w.upper() for w in words]), clue))
+
+        clue, words = saved_clues[order[0]]
+        return clue, len(words)
 
 
     def play_human_spymaster(self):

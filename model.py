@@ -7,7 +7,7 @@ import nltk.stem.wordnet
 
 class WordEmbedding(object):
 
-    def __init__(self, filename='word2vec.dat'):
+    def __init__(self, filename='word2vec.dat.2'):
         # Import gensim here so we can mute a UserWarning about the Pattern
         # library not being installed.
         with warnings.catch_warnings():
@@ -74,5 +74,5 @@ class WordEmbedding(object):
         # Special handling for the word "march" which the embedding has trouble with.
         if len(words) > 1 and 'march' in words:
             return []
-        
+
         return self.filter_clues(self.model.most_similar(words, topn=10), vetos)

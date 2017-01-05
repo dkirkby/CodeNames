@@ -73,15 +73,18 @@ class GameEngine(object):
             sys.stdout.write('\n')
 
 
-    def play_computer_spymaster(self, threshold=0.55, verbose=True):
+    def play_computer_spymaster(self, gamma=1.0, verbose=True):
 
         self.print_board(spymaster=True)
+        print('Thinking...')
+        sys.stdout.flush()
 
         player = self.num_turns % 2
         player_label = '<>'[player] * 3
         player_words = self.board[(self.owner == player + 1) & self.visible]
-        avoid_words = self.board[(self.owner != player + 1) & self.visible]
-        visible_words = self.board[self.visible]
+        avoid_words = self.board[
+            (self.owner > 0) & (self.owner != player + 1) & self.visible]
+        veto_words = self.board[(self.owner == 0) & self.visible]
 
         # Loop over all permutations of words.
         num_words = len(player_words)
@@ -89,13 +92,14 @@ class GameEngine(object):
         for count in range(num_words, 0, -1):
             # Multiply similarity scores by this factor for any clue
             # corresponding to this many words.
-            bonus_factor = count ** 0.25
+            bonus_factor = count ** gamma
             for group in itertools.combinations(range(num_words), count):
                 words = player_words[list(group)]
-                clues = self.model.get_clues(words, visible_words)
-                if clues:
-                    best_score.append(clues[0][1] * bonus_factor)
-                    saved_clues.append((clues[0][0], words))
+                clue, score = self.model.get_clue(
+                    words, player_words, avoid_words, veto_words)
+                if clue:
+                    best_score.append(score * bonus_factor)
+                    saved_clues.append((clue, words))
         num_clues = len(saved_clues)
         order = sorted(xrange(num_clues),
                        key=lambda k: best_score[k], reverse=True)
@@ -151,9 +155,13 @@ class GameEngine(object):
                     print('\nBye.')
                     sys.exit(0)
                 guess = guess.strip().lower().replace(' ', '_')
-                if guess in self.board[self.visible]:
+                if guess == '' or guess in self.board[self.visible]:
                     break
                 print('Invalid guess, should be a visible word.')
+
+            if guess == '':
+                # Team does not want to make any more guesses.
+                return True
 
             loc = np.where(self.board == guess)[0]
             self.visible[loc] = False
@@ -194,8 +202,8 @@ class GameEngine(object):
         return ongoing
 
 
-    def play_game(self, spymaster1='human', spymaster2='human',
-                  team1='human', team2='human'):
+    def play_game(self, spymaster1='human', team1='human',
+                  spymaster2='human', team2='human'):
 
         self.initialize_game()
         while True:

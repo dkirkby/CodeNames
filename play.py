@@ -11,7 +11,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Play the CodeNames game.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-c', '--config', type=str, default='HHHH',
+    parser.add_argument('-c', '--config', type=str, default='CHCH',
                         help='Config <spy1><team1><spy2><team2> using C,H.')
     parser.add_argument('--seed', type=int, default=None,
                         help='Random seed for reproducible games.')

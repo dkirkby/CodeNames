@@ -11,6 +11,8 @@ import gzip
 
 import nltk.tokenize
 
+from build_corpus import CORPUS_DIRECTORY
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -48,7 +50,7 @@ def main():
     all_sentences = []
     last_count = 0
 
-    for topic_file in glob.glob(os.path.join('corpus', '*.txt')):
+    for topic_file in glob.glob(os.path.join(CORPUS_DIRECTORY, '*.txt')):
         topic_name = topic_file[7:-4]
         with io.open(topic_file, 'r', encoding=args.encoding) as f:
 

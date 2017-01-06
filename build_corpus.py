@@ -7,6 +7,8 @@ import os.path
 
 import wikipedia
 
+CORPUS_DIRECTORY='corpus'
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -23,6 +25,9 @@ def main():
     with open(args.input, 'r') as f:
         words = [w.strip().capitalize() for w in f]
     print('Read {0} words from {1}.'.format(len(words), args.input))
+
+    if not os.path.isdir(CORPUS_DIRECTORY):
+        os.mkdir(CORPUS_DIRECTORY)
 
     for word in words:
         titles = set()
@@ -54,7 +59,7 @@ def main():
             print('->' + str(e))
 
         num_pages = 0
-        out_name = os.path.join('corpus', word + '.txt')
+        out_name = os.path.join(CORPUS_DIRECTORY, word + '.txt')
         with io.open(out_name, 'w', encoding=args.encoding) as out:
             for title in titles:
                 # Remove any quotes.

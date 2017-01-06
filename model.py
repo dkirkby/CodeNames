@@ -31,10 +31,14 @@ class WordEmbedding(object):
     def get_stem(self, word):
         """Return the stem of word.
         """
+        # Hardcode some stemming rules for the default CodeName words
+        # that the wordnet lemmatizer doesn't know about.
         if word in ('pass', 'passing', 'passed',):
             return 'pass'
         if word in ('microscope', 'microscopy'):
             return 'microscope'
+        if word in ('mexico', 'mexican', 'mexicans'):
+            return 'mexico'
         return self.lemmatizer.lemmatize(word).encode('ascii', 'ignore')
 
 

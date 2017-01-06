@@ -42,40 +42,6 @@ class WordEmbedding(object):
         return self.lemmatizer.lemmatize(word).encode('ascii', 'ignore')
 
 
-    def filter_clues(self, similar, vetos):
-        """
-        Filter a ranked list of (word, score) tuples to remove entries
-        that are:
-         - similar to words in the veto list
-         - similar to previously selected clues
-         - invalid clues.
-        """
-        veto_words = set(vetos)
-        veto_stems = set([self.get_stem(word) for word in veto_words])
-        filtered = []
-        for word, score in similar:
-            stem = self.get_stem(word)
-            if stem in veto_stems:
-                continue
-            # Ignore words that are contained within a veto word or vice versa.
-            contained = False
-            for veto in veto_words:
-                if veto in word or word in veto:
-                    contained = True
-                    break
-            if contained:
-                continue
-            # Ignore words with special characters.
-            if set(word) & set('\\.'):
-                continue
-            # Add this word to the veto list.
-            veto_stems.add(stem)
-            veto_words.add(word)
-            filtered.append((word, score))
-
-        return filtered
-
-
     def get_clue(self, clue_words, pos_words, neg_words, veto_words,
                  veto_margin=0.2, num_search=100, verbose=0):
         """

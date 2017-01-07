@@ -105,7 +105,10 @@ class GameEngine(object):
         self.num_turns = 0
 
 
-    def print_board(self, spymaster=False):
+    def print_board(self, spymaster=False, clear_screen=True):
+
+        if clear_screen:
+            sys.stdout.write(chr(27) + '[2J')
 
         board = self.board.reshape(self.size, self.size)
         owner = self.owner.reshape(self.size, self.size)
@@ -160,6 +163,12 @@ class GameEngine(object):
                 clue, words = saved_clues[i]
                 print('{0:.3f} {1} = {2}'.format(
                     best_score[i], ' + '.join([w.upper() for w in words]), clue))
+
+        try:
+            raw_input('Hit ENTER to continue...')
+        except KeyboardInterrupt:
+            print('\nBye.')
+            sys.exit(0)            
 
         clue, words = saved_clues[order[0]]
         return clue, len(words)

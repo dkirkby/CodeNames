@@ -37,8 +37,11 @@ class WordEmbedding(object):
             return 'pass'
         if word in ('microscope', 'microscopy'):
             return 'microscope'
-        if word in ('mexico', 'mexican', 'mexicans'):
+        if word in ('mexico', 'mexican', 'mexicans', 'mexicali'):
             return 'mexico'
+        if word in ('theater', 'theatre', 'theaters', 'theatres',
+                    'theatrical', 'theatricals'):
+            return 'theater'
         return self.lemmatizer.lemmatize(word).encode('ascii', 'ignore')
 
 

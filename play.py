@@ -15,6 +15,8 @@ def main():
                         help='Config <spy1><team1><spy2><team2> using C,H.')
     parser.add_argument('--seed', type=int, default=None,
                         help='Random seed for reproducible games.')
+    parser.add_argument('--init', type=str, default=None,
+                        help='Initialize words ASSASSIN;TEAM1;TEAM2;NEUTRAL')
     args = parser.parse_args()
 
     if not re.match('^[CH]{4}$', args.config):
@@ -28,7 +30,7 @@ def main():
     team2 = d[args.config[3]]
 
     e = engine.GameEngine(seed=args.seed)
-    e.play_game(spy1, team1, spy2, team2)
+    e.play_game(spy1, team1, spy2, team2, init=args.init)
 
 
 if __name__ == '__main__':

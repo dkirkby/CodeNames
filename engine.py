@@ -11,7 +11,7 @@ import model
 
 class GameEngine(object):
 
-    def __init__(self, seed=None, wordlist='words.txt',
+    def __init__(self, seed=None, init=None, wordlist='words.txt',
                  model_name='word2vec.dat'):
 
         # Load our word list if necessary.
@@ -31,7 +31,7 @@ class GameEngine(object):
         self.valid_clue = re.compile('^([a-zA-Z]+) ([0-9])$')
 
 
-    def initialize_game(self, size=5):
+    def initialize_random_game(self, size=5):
 
         self.size = size
 
@@ -50,6 +50,58 @@ class GameEngine(object):
 
         # All cards are initially visible.
         self.visible = np.ones_like(self.owner, dtype=bool)
+        self.num_turns = 0
+
+
+    def initialize_from_words(self, initial_words, size=5):
+        """
+        The initial_words parameter should be in the format:
+
+            ASSASSIN;TEAM1;TEAM2;NEUTRAL
+
+        where each group consists of comma-separated words from the word list.
+
+        The total number of words must be <= size * size. Any missing words
+        are considered to be already covered and neutral.
+        """
+        self.size = size
+
+        word_groups = initial_words.split(';')
+        if len(word_groups) != 4:
+            raise ValueError('Expected 4 groups separated by semicolon.')
+
+        board, owner, visible = [], [], []
+        for group_index, word_group in enumerate(word_groups):
+            words = word_group.split(',')
+            for word in words:
+                word = word.lower().replace(' ', '_')
+                if word not in self.words:
+                    raise ValueError('Invalid word "{0}".'.format(word))
+                if word in board:
+                    raise ValueError('Duplicate word "{0}".'.format(word))
+                board.append(word)
+                owner.append(group_index)
+                visible.append(True)
+        if len(board) > size * size:
+            raise ValueError(
+                'Too many words. Expected <= {0}.'.format(size * size))
+        # Add dummy hidden words if necessary.
+        while len(board) < size * size:
+            board.append('---')
+            owner.append(3)
+            visible.append(False)
+
+        self.board = np.array(board)
+        self.owner = np.array(owner)
+        self.visible = np.array(visible)
+
+        # Perform a random shuffle of the board.
+        shuffle = self.generator.permutation(size * size)
+        self.board = self.board[shuffle]
+        self.owner = self.owner[shuffle]
+        self.visible = self.visible[shuffle]
+
+        # TEAM1 plays next.
         self.num_turns = 0
 
 
@@ -203,9 +255,12 @@ class GameEngine(object):
 
 
     def play_game(self, spymaster1='human', team1='human',
-                  spymaster2='human', team2='human'):
+                  spymaster2='human', team2='human', init=None):
 
-        self.initialize_game()
+        if init is None:
+            self.initialize_random_game()
+        else:
+            self.initialize_from_words(init)
         while True:
             if not self.play_turn(spymaster1, team1): break
             if not self.play_turn(spymaster2, team2): break

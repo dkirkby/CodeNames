@@ -9,7 +9,7 @@ Requirements
 
 Code is currently developed and tested using python 2.7.  The following external
 packages are required, and all available via pip:
- - wikipedia: interact with the wikimedia API.
+ - pywikibot: interact with the wikimedia API.
  - nltk: Natural language tool kit.
  - gensim: Learn word vector embeddings from a large corpus text.
 
@@ -27,11 +27,22 @@ Knowledge Base
 --------------
 
 The AI learns from a large set of sentences called the "corpus". Build the
-corpus using:
+corpus by first selecting articles from the english wikipedia related to each
+word with:
 ```
+./create_corpus_index.py
 ./build_corpus.py
 ```
-This will read the list of words used in the game from `words.txt` and writes plain text content downloaded from wikipedia into a single file per word in the `corpus/` subdirectory.
+This will read the list of words used in the game from `words.txt` and writes an
+index file `corpus/<Word>.index` for each one containing wikipedia page titles (with
+utf-8 encoding).  This script aims for the same number (nominally 10K) of articles
+for each word, but some words might have less if not enough articles can be found.
+
+The next step is to download the content of all articles using:
+```
+./download_corpus_content.py
+```
+Need more details here...
 
 Next, use the following command to split the saved content into sentences and words, with punctuation removed and everything lower case:
 ```

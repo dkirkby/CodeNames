@@ -31,16 +31,18 @@ corpus by first selecting articles from the english wikipedia related to each
 word with:
 ```
 ./create_corpus_index.py
-./build_corpus.py
 ```
 This will read the list of words used in the game from `words.txt` and writes an
 index file `corpus/<Word>.index` for each one containing wikipedia page titles (with
 utf-8 encoding).  This script aims for the same number (nominally 10K) of articles
 for each word, but some words might have less if not enough articles can be found.
+I had to restart this process a few times due to uncaught pywikibot.data.api.APIError
+exceptions (TODO: implement automatic recovery from these).  The whole index-creation
+step takes about 6 hours.
 
 The next step is to download the content of all articles using:
 ```
-./download_corpus_content.py
+./fetch_corpus_text.py
 ```
 Need more details here...
 

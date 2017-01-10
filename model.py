@@ -42,6 +42,8 @@ class WordEmbedding(object):
         if word in ('theater', 'theatre', 'theaters', 'theatres',
                     'theatrical', 'theatricals'):
             return 'theater'
+        if word in ('alp', 'alps', 'apline', 'alpinist'):
+            return 'alp'
         return self.lemmatizer.lemmatize(word).encode('ascii', 'ignore')
 
 
@@ -111,25 +113,27 @@ class WordEmbedding(object):
             if min_clue_cosine < max_min_cosine:
                 continue
             # Are all positive words more similar than any negative words?
-            max_neg_cosine = np.max(neg_cosine)
-            if max_neg_cosine >= min_clue_cosine:
-                # A negative word is likely to be selected before all the
-                # positive words.
-                if verbose >= 3:
-                    neg_word = neg_words[np.argmax(neg_cosine)]
-                    print('neg word {0} is a distractor (cosine={1:.4f})'
-                          .format(neg_word, max_neg_cosine))
-                continue
+            if neg_words:
+                max_neg_cosine = np.max(neg_cosine)
+                if max_neg_cosine >= min_clue_cosine:
+                    # A negative word is likely to be selected before all the
+                    # positive words.
+                    if verbose >= 3:
+                        neg_word = neg_words[np.argmax(neg_cosine)]
+                        print('neg word {0} is a distractor (cosine={1:.4f})'
+                              .format(neg_word, max_neg_cosine))
+                    continue
             # Is this word too similar to any of the veto words?
-            max_veto_cosine = np.max(veto_cosine)
-            if max_veto_cosine >= min_clue_cosine - veto_margin:
-                # A veto word is too likely to be selected before all the
-                # positive words.
-                if verbose >= 2:
-                    veto_word = veto_words[np.argmax(veto_cosine)]
-                    print('veto word {0} is a distractor (cosine={1:.4f})'
-                          .format(veto_word, max_veto_cosine))
-                continue
+            if veto_words:
+                max_veto_cosine = np.max(veto_cosine)
+                if max_veto_cosine >= min_clue_cosine - veto_margin:
+                    # A veto word is too likely to be selected before all the
+                    # positive words.
+                    if verbose >= 2:
+                        veto_word = veto_words[np.argmax(veto_cosine)]
+                        print('veto word {0} is a distractor (cosine={1:.4f})'
+                              .format(veto_word, max_veto_cosine))
+                    continue
             # If we get here, we have a new best clue.
             max_min_cosine = min_clue_cosine
             best_clue = clue

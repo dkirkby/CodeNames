@@ -8,6 +8,7 @@ import warnings
 import multiprocessing
 import gzip
 import random
+import struct
 
 import wikipedia
 
@@ -21,6 +22,17 @@ def fetch(word, encoding='utf8', min_size=5e6):
 
     in_name = os.path.join(CORPUS_DIRECTORY, '{0}.index'.format(word))
     out_name = os.path.join(CORPUS_DIRECTORY, '{0}.txt.gz'.format(word))
+
+    # Has this word already been fetched?
+    if os.path.exists(out_name):
+        with open(out_name, 'rb') as f_in:
+            try:
+                f_in.seek(-4, 2)
+                size = struct.unpack('<I', f_in.read(4))[0]
+                if size >= min_size:
+                    return (word, 0, 0, size)
+            except Exception as e:
+                print('SEEK ERROR::', word, str(e))
 
     with io.open(in_name, 'r', encoding=encoding) as f_in:
         # Read all page titles.
@@ -45,18 +57,17 @@ def fetch(word, encoding='utf8', min_size=5e6):
                         page = wikipedia.page(
                             page_title, auto_suggest=False, preload=False)
                         content = page.content
+                        # Save this article's content.
+                        f_out.write(content.encode(encoding))
+                        total_size += len(content)
+                        num_articles += 1
+                        if total_size >= min_size:
+                            break
                     except wikipedia.exceptions.DisambiguationError as e:
                         # Ignore disambiguation pages.
                         pass
                     except Exception as e:
                         print('Unexpected Error:: {0}'.format(e))
-
-                # Save this article's content.
-                f_out.write(content.encode(encoding))
-                total_size += len(content)
-                num_articles += 1
-                if total_size >= min_size:
-                    break
 
     return (word, len(page_titles), num_articles, total_size)
 

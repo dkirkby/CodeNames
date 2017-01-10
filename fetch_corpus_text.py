@@ -67,8 +67,6 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-i', '--input', type=str, default='words.txt',
                         help='Name of word list to use.')
-    parser.add_argument('--encoding', type=str, default='utf8',
-                        help='Encoding for corpus index and text files.')
     parser.add_argument('--nproc', type=int, default=20,
                         help='Number of processing pool workers to use.')
     args = parser.parse_args()
@@ -80,7 +78,7 @@ def main():
     print('Read {0} words from {1}.'.format(len(words), args.input))
 
     pool = multiprocessing.Pool(processes=args.nproc)
-    result = pool.map_async(fetch, words[:10])
+    result = pool.map_async(fetch, words)
     result.wait()
     for article_info in result.get():
         print(article_info)

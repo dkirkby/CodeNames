@@ -44,7 +44,12 @@ The next step is to download the content of all articles using:
 ```
 ./fetch_corpus_text.py
 ```
-Need more details here...
+This step is performed in parallel (using 20 processes by default) since it is IO bound.
+In case it fails for some reason, it can be restarted and will automatically skip over
+any words that have already been fetched.  The goal of the fetching step is to download
+~5M characters of plain (unicode) text for each code word.  This does not require
+downloading all of the indexed articles, so articles are processed in a random (but
+reproducible) order until at least 5M characters have been downloaded.
 
 Next, use the following command to split the saved content into sentences and words, with punctuation removed and everything lower case:
 ```

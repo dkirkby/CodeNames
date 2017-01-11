@@ -16,7 +16,7 @@ import wikipedia
 CORPUS_DIRECTORY='corpus'
 
 
-def fetch(word, encoding='utf8', min_size=5e6):
+def fetch(word, encoding='utf8', min_size=5e6, dry_run=True):
 
     # Use a reproducible but different "random" shuffle for each word.
     random.seed(word)
@@ -50,6 +50,9 @@ def fetch(word, encoding='utf8', min_size=5e6):
         order = range(len(page_titles))
         random.shuffle(order)
         print('Fetching from {0} pages for {1}.'.format(len(page_titles), word))
+
+        if dry_run:
+            return (word, 0, 0, 0)
 
         total_size = 0
         num_articles = 0

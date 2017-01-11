@@ -15,8 +15,9 @@ import wikipedia
 
 CORPUS_DIRECTORY='corpus'
 
+dry_run = False
 
-def fetch(word, encoding='utf8', min_size=5e6, dry_run=True):
+def fetch(word, encoding='utf8', min_size=5e6):
 
     # Use a reproducible but different "random" shuffle for each word.
     random.seed(word)
@@ -30,15 +31,13 @@ def fetch(word, encoding='utf8', min_size=5e6, dry_run=True):
         try:
             # Check the GZIP structure.
             with gzip.open(out_name, 'rb') as f_in:
-                f_in.seek(-1, os.SEEK_END)
-                assert f_in.read(1) == '.'
+                f_in._read_gzip_header()
             # Check the file size.
             with open(out_name, 'rb') as f_in:
                 f_in.seek(-4, 2)
                 size = struct.unpack('<I', f_in.read(4))[0]
                 if size >= min_size:
                     # File looks ok so nothing more to do.
-                    print('Skipping good file {0}'.format(out_name))
                     return (word, 0, 0, size)
         except Exception as e:
             print('Bad file "{0}":: {1}'.format(out_name, e))
@@ -86,6 +85,7 @@ def fetch(word, encoding='utf8', min_size=5e6, dry_run=True):
 
 
 def main():
+    global dry_run
     parser = argparse.ArgumentParser(
         description='Fetch indexed training corpus text.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -93,7 +93,10 @@ def main():
                         help='Name of word list to use.')
     parser.add_argument('--nproc', type=int, default=20,
                         help='Number of processing pool workers to use.')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='Perform a dry run only.')
     args = parser.parse_args()
+    dry_run = args.dry_run
 
     # Read the word list into memory and format using wikimedia conventions.
     # https://en.wikipedia.org/wiki/Wikipedia:Naming_conventions_(capitalization)
@@ -104,8 +107,6 @@ def main():
     pool = multiprocessing.Pool(processes=args.nproc)
     result = pool.map_async(fetch, words)
     result.wait()
-    for article_info in result.get():
-        print(article_info)
 
 
 if __name__ == '__main__':

@@ -11,8 +11,8 @@ import model
 
 class GameEngine(object):
 
-    def __init__(self, seed=None, init=None, wordlist='words.txt',
-                 model_name='word2vec.dat'):
+    def __init__(self, seed=None, expert=False,
+                 wordlist='words.txt', model_name='word2vec.dat'):
 
         # Load our word list if necessary.
         # TODO: Max length of 11 is hardcoded here and in print_board()
@@ -27,9 +27,12 @@ class GameEngine(object):
         # Initialize random numbers.
         self.generator = np.random.RandomState(seed=seed)
 
+        # Register expert mode
+        self.expert = expert
+        self.unfound_words = (set(), set())
+
         # Useful regular expressions.
         self.valid_clue = re.compile('^([a-zA-Z]+) ([0-9])$')
-
 
     def initialize_random_game(self, size=5):
 
@@ -51,7 +54,6 @@ class GameEngine(object):
         # All cards are initially visible.
         self.visible = np.ones_like(self.owner, dtype=bool)
         self.num_turns = 0
-
 
     def initialize_from_words(self, initial_words, size=5):
         """
@@ -104,7 +106,6 @@ class GameEngine(object):
         # TEAM1 plays next.
         self.num_turns = 0
 
-
     def print_board(self, spymaster=False, clear_screen=True):
 
         if clear_screen:
@@ -126,7 +127,6 @@ class GameEngine(object):
                     word = word.upper()
                 sys.stdout.write('{0}{1:11s} '.format(tag, word))
             sys.stdout.write('\n')
-
 
     def play_computer_spymaster(self, gamma=1.0, verbose=True):
 
@@ -168,11 +168,12 @@ class GameEngine(object):
             raw_input('Hit ENTER to continue...')
         except KeyboardInterrupt:
             print('\nBye.')
-            sys.exit(0)            
+            sys.exit(0)
 
         clue, words = saved_clues[order[0]]
+        self.unfound_words[player].update(words)
+        print(self.unfound_words)
         return clue, len(words)
-
 
     def play_human_spymaster(self):
 
@@ -193,13 +194,11 @@ class GameEngine(object):
                 return word, count
             print('Invalid clue, should be WORD COUNT.')
 
-
     def play_human_team(self, word, count):
 
         player = self.num_turns % 2
         player_label = '<>'[player] * 3
-        player_words = set(
-            self.board[(self.owner == player + 1) & self.visible])
+        player_words = set(self.board[(self.owner == player + 1) & self.visible])
         assasin = self.board[self.owner == 0]
 
         num_guesses = 0
@@ -246,7 +245,6 @@ class GameEngine(object):
 
         return True
 
-
     def play_turn(self, spymaster='human', team='human'):
 
         if spymaster == 'human':
@@ -261,7 +259,6 @@ class GameEngine(object):
 
         self.num_turns += 1
         return ongoing
-
 
     def play_game(self, spymaster1='human', team1='human',
                   spymaster2='human', team2='human', init=None):

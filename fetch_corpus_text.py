@@ -3,6 +3,7 @@ from __future__ import print_function, division
 
 import argparse
 import io
+import os
 import os.path
 import warnings
 import multiprocessing
@@ -25,14 +26,22 @@ def fetch(word, encoding='utf8', min_size=5e6):
 
     # Has this word already been fetched?
     if os.path.exists(out_name):
-        with open(out_name, 'rb') as f_in:
-            try:
+        # Check that it is a correctly formatted gzip file of sufficient size.
+        try:
+            # Check the GZIP structure.
+            with gzip.open(out_name, 'rb') as f_in:
+                f_in.seek(-1, os.SEEK_END)
+                assert f_in.read(1) == '.'
+            # Check the file size.
+            with open(out_name, 'rb') as f_in:
                 f_in.seek(-4, 2)
                 size = struct.unpack('<I', f_in.read(4))[0]
                 if size >= min_size:
+                    # File looks ok so nothing more to do.
+                    print('Skipping good file {0}'.format(out_name))
                     return (word, 0, 0, size)
-            except Exception as e:
-                print('SEEK ERROR::', word, str(e))
+        except Exception as e:
+            print('Bad file "{0}":: {1}'.format(out_name, e))
 
     with io.open(in_name, 'r', encoding=encoding) as f_in:
         # Read all page titles.
@@ -40,6 +49,7 @@ def fetch(word, encoding='utf8', min_size=5e6):
         # Generate a random order of page titles.
         order = range(len(page_titles))
         random.shuffle(order)
+        print('Fetching from {0} pages for {1}.'.format(len(page_titles), word))
 
         total_size = 0
         num_articles = 0

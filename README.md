@@ -51,12 +51,21 @@ any words that have already been fetched.  The goal of the fetching step is to d
 downloading all of the indexed articles, so articles are processed in a random (but
 reproducible) order until at least 5M characters have been downloaded.
 
-Next, use the following command to split the saved content into sentences and words, with punctuation removed and everything lower case:
+The final step is to preprocess the downloaded text into a format suitable for
+feeding directly into word2vec training:
+- Split into sentences, one per line.
+- Convert markup headings ("== Heading ==") into sentences.
+- Split into word tokens.
+- Combine compound words from the word list ("ice cream" -> "ice_cream").
+- Remove punctuation.
+- Convert to lower case.
+
+This step is performed using:
 ```
-./merge_corpus.py
+./preprocess_corpus.py
 ```
-The results are saved in a single compressed text file where the sentences for each topic
-appear in random order.
+which converts each `corpus/Word.txt.gz` into a corresponding `corpus/Word.pre.gz`.
+
 
 Machine Learning
 ----------------

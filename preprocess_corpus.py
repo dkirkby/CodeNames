@@ -16,86 +16,92 @@ from build_corpus import CORPUS_DIRECTORY
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Merge training corpus.',
+        description='Preprocess training corpus.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-i', '--input', type=str, default='words.txt',
                         help='Name of word list to use.')
-    parser.add_argument('-o', '--output', type=str, default='corpus.txt.gz',
-                        help='Name of merged corpus to write.')
+    parser.add_argument('-o', '--output', type=str, default='freqs.dat',
+                        help='Filename for saving word list frequencies.')
     parser.add_argument('--encoding', type=str, default='utf8',
                         help='Encoding for reading corpus text.')
-    parser.add_argument('--seed', type=int, default=2407,
-                        help='Random seed for shuffling sentences.')
     args = parser.parse_args()
 
-    heading = re.compile('=+ [^=]+ =+\s*')
+    heading = re.compile('=+ ([^=]+) =+\s*')
     punctuation = (',', ';', ':', '.', '!', '?', '-', '%', '&', '$',
                    '(', ')', '[', ']', '{', '}', '``', "''")
 
     # Read the word list and find any compound words since they must be
     # treated as a single word during the learning step.
+    word_list = []
     compound = {}
-    word_count = {}
+    total_freq, cross_freq, corpus_stats = {}, {}, {}
     with open(args.input, 'r') as f:
         for word in f:
+            word_list.append(word.strip().capitalize())
             word = word.strip().lower()
             if ' ' in word:
                 compound[word] = word.replace(' ', '_')
-                word_count[compound[word]] = 0
+                freq_key = compound[word]
             else:
-                word_count[word] = 0
+                freq_key = word
+            # Initialize frequency counters.
+            total_freq[freq_key] = cross_freq[freq_key] = 0
+            corpus_stats[freq_key] = (0, 0)
     print('Wordlist contains {0} compound words:'.format(len(compound)))
     print(compound.keys())
 
-    all_sentences = []
-    last_count = 0
+    for word in word_list:
 
-    for topic_file in glob.glob(os.path.join(CORPUS_DIRECTORY, '*.txt')):
-        topic_name = topic_file[7:-4]
-        with io.open(topic_file, 'r', encoding=args.encoding) as f:
+        freq_key = word.lower().replace(' ', '_')
 
+        in_name = os.path.join(CORPUS_DIRECTORY, '{0}.txt.gz'.format(word))
+        if not os.path.exists(in_name):
+            print('Skipping missing file {0}'.format(in_name))
+            continue
+
+        out_name = os.path.join(CORPUS_DIRECTORY, '{0}.pre.gz')
+        num_sentences, num_words = 0, 0
+
+        with gzip.open(in_name, 'rb') as f_in:
             # Read the whole file into memory.
-            content = f.read()
-            # Convert to pure ascii, ignoring any non-ascii characters.
-            content = content.encode('ascii', 'ignore')
-            # Remove markup headings.
-            content = re.sub(heading, '', content)
-            # Loop over sentences.
-            for sentence in nltk.tokenize.sent_tokenize(content):
-                words = []
-                for token in nltk.tokenize.word_tokenize(sentence):
-                    # Ignore punctuation.
-                    if token in punctuation:
-                        continue
-                    words.append(token.lower())
-                line = ' '.join(words)
-                # Replace ' ' with '_' in compound words.
-                for w in compound:
-                    line = line.replace(w, compound[w])
-                # Update wordlist frequencies.
-                for w in line.split():
-                    if w in word_count:
-                        word_count[w] += 1
-                # Add this sentence to the corpus.
-                all_sentences.append(line)
+            content = f_in.read().decode(args.encoding)
+            # Remove markup from headings.
+            content = re.sub(heading, '\\1', content)
 
-        print('{0:5d} {1}'.format(len(all_sentences) - last_count, topic_name))
-        last_count = len(all_sentences)
+            with gzip.open(out_name, 'wb') as f_out:
+                # Loop over sentences.
+                for sentence in nltk.tokenize.sent_tokenize(content):
+                    words = []
+                    for token in nltk.tokenize.word_tokenize(sentence):
+                        # Ignore punctuation.
+                        if token in punctuation:
+                            continue
+                        words.append(token.lower())
+                    line = ' '.join(words)
+                    # Replace ' ' with '_' in compound words.
+                    for w in compound:
+                        line = line.replace(w, compound[w])
+                    # Update wordlist frequencies.
+                    for w in line.split():
+                        num_words += 1
+                        if w in total_freq:
+                            total_freq[w] += 1
+                            if w != freq_key:
+                                cross_freq[w] += 1
+                    num_sentences += 1
+                    # Save this sentence to the preprocessed output.
+                    f_out.write(line.encode(args.encoding) + '\n')
 
-    # Pick a random permutation of the sentences.
-    random.seed(args.seed)
-    order = random.sample(xrange(last_count), last_count)
+        print(word, num_sentences, num_words)
+        corpus_stats[freq_key] = (num_sentences, num_words)
 
-    # Save the shuffled sentences to a text file.
-    with gzip.open(args.output, 'wb') as f:
-        for i in order:
-            f.write(all_sentences[i] + '\n')
-
-    print('Saved {0} sentences to {1}.'.format(last_count, args.output))
-
-    # Print wordlist frequencies in decreasing order.
-    for w in sorted(word_count, key=word_count.get, reverse=True):
-        print('{0:5d} {1}'.format(word_count[w], w))
+    # Save wordlist frequencies in decreasing order.
+    with open(args.output, 'w') as f_out:
+        print('WORD         TOTFREQ    XFREQ    NSENT    NWORD', file=f_out)
+        for w in sorted(total_freq, key=total_freq.get, reverse=True):
+            print('{0:11s} {1:8d} {2:8d} {3:8d} {4:8d}'.format(
+                w, total_freq[w], cross_freq[w], *corpus_stats[w]), file=f_out)
+    print('Saved wordlist frequencies to {0}'.format(args.output))
 
 
 if __name__ == '__main__':

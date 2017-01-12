@@ -65,8 +65,8 @@ def main():
         with gzip.open(in_name, 'rb') as f_in:
             # Read the whole file into memory.
             content = f_in.read().decode(args.encoding)
-            # Remove markup from headings.
-            content = re.sub(heading, '\\1', content)
+            # Remove headings.
+            content = re.sub(heading, '', content)
 
             with gzip.open(out_name, 'wb') as f_out:
                 # Loop over sentences.

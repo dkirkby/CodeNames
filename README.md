@@ -54,7 +54,7 @@ reproducible) order until at least 5M characters have been downloaded.
 The final step is to preprocess the downloaded text into a format suitable for
 feeding directly into word2vec training:
 - Split into sentences, one per line.
-- Convert markup headings ("== Heading ==") into sentences.
+- Remove markup headings (e.g., "== References ==").
 - Split into word tokens.
 - Combine compound words from the word list ("ice cream" -> "ice_cream").
 - Remove punctuation.

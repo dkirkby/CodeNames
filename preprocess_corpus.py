@@ -59,7 +59,7 @@ def main():
             print('Skipping missing file {0}'.format(in_name))
             continue
 
-        out_name = os.path.join(CORPUS_DIRECTORY, '{0}.pre.gz')
+        out_name = os.path.join(CORPUS_DIRECTORY, '{0}.pre.gz'.format(word))
         num_sentences, num_words = 0, 0
 
         with gzip.open(in_name, 'rb') as f_in:

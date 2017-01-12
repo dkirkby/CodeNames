@@ -65,7 +65,8 @@ This step is performed using:
 ./preprocess_corpus.py
 ```
 which converts each `corpus/Word.txt.gz` into a corresponding `corpus/Word.pre.gz`.
-
+Processing runs in a single process since it is relatively fast and this simplifies
+collecting the summary statistics in the `freqs.dat` output file.
 
 Machine Learning
 ----------------

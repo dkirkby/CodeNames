@@ -8,6 +8,9 @@ import numpy as np
 
 import model
 
+CLUE_PATTERN = r'^([a-zA-Z]+) ({0})$'
+UNLIMITED = "unlimited"
+
 
 class GameEngine(object):
 
@@ -32,7 +35,10 @@ class GameEngine(object):
         self.unfound_words = (set(), set())
 
         # Useful regular expressions.
-        self.valid_clue = re.compile('^([a-zA-Z]+) ([0-9])$')
+        if self.expert:
+            self.valid_clue = re.compile(CLUE_PATTERN.format("[0-9]|" + UNLIMITED))
+        else:
+            self.valid_clue = re.compile(CLUE_PATTERN.format("[0-9]"))
 
     def initialize_random_game(self, size=5):
 
@@ -47,9 +53,9 @@ class GameEngine(object):
         assignments = self.generator.permutation(size * size)
         self.owner = np.empty(size * size, int)
         self.owner[assignments[0]] = 0 # assassin
-        self.owner[assignments[1:10]] = 1 # first player
-        self.owner[assignments[10:19]] = 2 # second player
-        self.owner[assignments[19:]] = 3 # bystander
+        self.owner[assignments[1:10]] = 1 # first player: 9 words
+        self.owner[assignments[10:18]] = 2 # second player: 8 words
+        self.owner[assignments[18:]] = 3 # bystander: 7 words
 
         # All cards are initially visible.
         self.visible = np.ones_like(self.owner, dtype=bool)
@@ -172,8 +178,21 @@ class GameEngine(object):
 
         clue, words = saved_clues[order[0]]
         self.unfound_words[player].update(words)
-        print(self.unfound_words)
-        return clue, len(words)
+        if self.expert and self._should_say_unlimited(nb_clue_words=len(words)):
+            return clue, UNLIMITED
+        else:
+            return clue, len(words)
+
+    def _should_say_unlimited(self, nb_clue_words, threshold_opponent=2):
+        player = self.num_turns % 2
+        opponent = (player + 1) % 2
+        player_words = self.board[(self.owner == player + 1) & self.visible]
+        opponent_words = self.board[(self.owner == opponent + 1) & self.visible]
+
+        return (len(opponent_words) <= threshold_opponent  # the opposing team risks winning with their next clue, and
+                and nb_clue_words + 1 < len(player_words)  # our +1 guess isn't enough to catch up during this clue,
+                # but all the words hinted by the current and previous clues are enough to catch up and win
+                and self.unfound_words[player] == set(player_words))
 
     def play_human_spymaster(self):
 
@@ -190,7 +209,8 @@ class GameEngine(object):
             matched = self.valid_clue.match(clue)
             if matched:
                 word, count = matched.groups()
-                count = int(count)
+                if count != UNLIMITED:
+                    count = int(count)
                 return word, count
             print('Invalid clue, should be WORD COUNT.')
 
@@ -201,16 +221,20 @@ class GameEngine(object):
         player_words = set(self.board[(self.owner == player + 1) & self.visible])
         assasin = self.board[self.owner == 0]
 
+        if self.expert and count == UNLIMITED:
+            def can_guess_again(_): return True
+        else:
+            def can_guess_again(g): return g < count + 1
+
         num_guesses = 0
-        while num_guesses <= count + 1:
+        while can_guess_again(num_guesses):
             self.print_board(spymaster=False)
             print('{0} your clue is: {1} {2}'.format(player_label, word, count))
             num_guesses += 1
 
             while True:
                 try:
-                    guess = raw_input('{0} enter your guess #{1}: '
-                                      .format(player_label, num_guesses))
+                    guess = raw_input('{0} enter your guess #{1}: '.format(player_label, num_guesses))
                 except KeyboardInterrupt:
                     print('\nBye.')
                     sys.exit(0)
@@ -227,15 +251,14 @@ class GameEngine(object):
             self.visible[loc] = False
 
             if guess == assasin:
-                print('{0} You guessed the assasin - game over!'
-                      .format(player_label))
+                print('{0} You guessed the assasin - game over!'.format(player_label))
                 return False
 
             if guess in player_words:
                 player_words.remove(guess)
+                self.unfound_words[player].discard(guess)
                 if player_words:
-                    print('{0} Congratulations, keep going!'
-                          .format(player_label))
+                    print('{0} Congratulations, keep going!'.format(player_label))
                 else:
                     print('{0} You won!!!'.format(player_label))
                     return False

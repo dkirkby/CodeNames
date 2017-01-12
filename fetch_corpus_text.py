@@ -27,18 +27,17 @@ def fetch(word, encoding='utf8', min_size=5e6):
 
     # Has this word already been fetched?
     if os.path.exists(out_name):
-        # Check that it is a correctly formatted gzip file of sufficient size.
         try:
-            # Check the GZIP structure.
+            # Check the GZIP structure and size.
             with gzip.open(out_name, 'rb') as f_in:
-                f_in._read_gzip_header()
-            # Check the file size.
-            with open(out_name, 'rb') as f_in:
-                f_in.seek(-4, 2)
-                size = struct.unpack('<I', f_in.read(4))[0]
+                # Uncompress the whole file into memory.  This is relatively
+                # expensive, but is the only foolproof check.
+                content = f_in.read().decode(encoding)
+                size = len(content)
                 if size >= min_size:
-                    # File looks ok so nothing more to do.
                     return (word, 0, 0, size)
+                print('Good file "{0}" below minimum size: {1} < {2}.'
+                      .format(out_name, size, min_size))
         except Exception as e:
             print('Bad file "{0}":: {1}'.format(out_name, e))
 

@@ -19,7 +19,7 @@ def main():
                         help='Name of word list to use.')
     parser.add_argument('-o', '--output', type=str, default='word2vec.dat',
                         help='File name for saved model.')
-    parser.add_argument('-p', '--npass', type=int, default=1,
+    parser.add_argument('--npass', type=int, default=1,
                         help='Perform this pass number.')
     parser.add_argument('--num-epochs', type=int, default=10,
                         help='Number of training epochs to run.')

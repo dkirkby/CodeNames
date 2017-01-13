@@ -21,7 +21,7 @@ def main():
                         help='File name for saved model.')
     parser.add_argument('-p', '--npass', type=int, default=1,
                         help='Perform this pass number.')
-    parser.add_argument('-n', '--num-epochs', type=int, default=10,
+    parser.add_argument('--num-epochs', type=int, default=10,
                         help='Number of training epochs to run.')
     parser.add_argument('--improve', action='store_true',
                         help='Continue to improve learning.')

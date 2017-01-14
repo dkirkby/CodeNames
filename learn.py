@@ -39,25 +39,32 @@ def main():
                         help='Filter out log messages below this level.')
     args = parser.parse_args()
 
+    # Configure logging.
+    logging.basicConfig(
+        format='%(asctime)s : %(levelname)s : %(message)s',
+        level=getattr(logging, args.log_level))
+    logger = logging.getLogger('learn')
+
     # Look for an existing corpus for this pass.
     corpus_name = 'corpus_{0}.gz'.format(args.npass)
     if os.path.exists(corpus_name):
 
-        print('Using corpus {0}'.format(corpus_name))
+        logger.info('Using corpus {0}'.format(corpus_name))
 
     else:
 
         # Read the wordlist into memory.
         with open(args.input, 'r') as f:
             wordlist = [w.strip().capitalize() for w in f]
-        print('Read {0} words from {1}.'.format(len(wordlist), args.input))
+        logger.info('Read {0} words from {1}.'
+                    .format(len(wordlist), args.input))
 
         # Open the output corpus file for this pass.
         f_out = gzip.open(corpus_name, 'wb')
 
         # Perform a reproducible random shuffle of the wordlist.
-        print('Shuffling the corpus for pass {0} into {1}...'
-              .format(args.npass, corpus_name))
+        logger.info('Shuffling the corpus for pass {0} into {1}...'
+                    .format(args.npass, corpus_name))
         random.seed(args.npass)
         random.shuffle(wordlist)
 
@@ -87,7 +94,7 @@ def main():
             for j in sentence_order:
                 f_out.write(sentences[j])
 
-            print('Added {0} sentences for ({1}, {2}).'.format(
+            logger.info('Added {0} sentences for ({1}, {2}).'.format(
                 len(sentences), wordlist[i], wordlist[i+1]))
 
         f_out.close()
@@ -97,11 +104,6 @@ def main():
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', UserWarning)
         import gensim.models.word2vec
-
-    # Configure logging so we can monitor the learning progress.
-    logging.basicConfig(
-        format='%(asctime)s : %(levelname)s : %(message)s',
-        level=getattr(logging, args.log_level))
 
     # Use the training sentences for this pass.
     sentences = gensim.models.word2vec.LineSentence(corpus_name)

@@ -79,9 +79,9 @@ relationships. Run training with the command:
 ```
 In practice, this takes a while so I run several iterations using multiple cores in parallel, and split the work up into ~8 hour chunks:
 ```
-nohup ./learn.py --workers 18 -npass 1 > learn1.log &
-nohup ./learn.py --workers 18 -npass 2 > learn2.log &
-nohup ./learn.py --workers 18 -npass 3 > learn3.log &
+nohup ./learn.py --workers 18 --npass 1 > learn1.log &
+nohup ./learn.py --workers 18 --npass 2 > learn2.log &
+nohup ./learn.py --workers 18 --npass 3 > learn3.log &
 ```
 Each job performs a random shuffle of the corpus followed by 10 epochs of training.
 

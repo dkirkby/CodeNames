@@ -84,6 +84,14 @@ nohup ./learn.py --workers 18 --npass 2 > learn2.log &
 nohup ./learn.py --workers 18 --npass 3 > learn3.log &
 ```
 Each job performs a random shuffle of the corpus followed by 10 epochs of training.
+The output from each job consists of 4 files (with N = npass):
+- word2vec.dat.N
+- word2vec.dat.N.syn0.npy
+- word2vec.dat.N.syn1.npy
+- word2vec.dat.N.syn1neg.npy
+
+The first file contains the vocabulary words and corresponding embedded vectors.
+The last three files contain the neural network weights.
 
 After training, run an evaluation suite of the embedding quality using:
 ```

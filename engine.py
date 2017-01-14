@@ -1,4 +1,5 @@
 from __future__ import print_function, division
+import os
 
 import sys
 import re
@@ -41,8 +42,6 @@ class GameEngine(object):
         else:
             self.valid_clue = re.compile(CLUE_PATTERN.format("[0-9]"))
 
-        self.num_turns = -1
-
     def initialize_random_game(self, size=5):
 
         self.size = size
@@ -64,6 +63,8 @@ class GameEngine(object):
 
         # All cards are initially visible.
         self.visible = np.ones_like(self.owner, dtype=bool)
+
+        self.num_turns = -1
 
     def initialize_from_words(self, initial_words, size=5):
         """
@@ -113,11 +114,13 @@ class GameEngine(object):
         self.visible = self.visible[shuffle]
 
         self.assassin_word = self.board[self.owner == 0]
+        self.num_turns = -1
 
     def print_board(self, spymaster=False, clear_screen=True):
 
         if clear_screen:
             sys.stdout.write(chr(27) + '[2J')
+            # os.system('cls||clear')
 
         board = self.board.reshape(self.size, self.size)
         owner = self.owner.reshape(self.size, self.size)

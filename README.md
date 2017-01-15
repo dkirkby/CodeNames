@@ -9,7 +9,7 @@ Requirements
 
 Code is currently developed and tested using python 2.7.  The following external
 packages are required, and all available via pip:
- - wikipedia: interact with the wikimedia API.
+ - pywikibot: interact with the wikimedia API.
  - nltk: Natural language tool kit.
  - gensim: Learn word vector embeddings from a large corpus text.
 
@@ -27,18 +27,46 @@ Knowledge Base
 --------------
 
 The AI learns from a large set of sentences called the "corpus". Build the
-corpus using:
+corpus by first selecting articles from the english wikipedia related to each
+word with:
 ```
-./build_corpus.py
+./create_corpus_index.py
 ```
-This will read the list of words used in the game from `words.txt` and writes plain text content downloaded from wikipedia into a single file per word in the `corpus/` subdirectory.
+This will read the list of words used in the game from `words.txt` and writes an
+index file `corpus/<Word>.index` for each one containing wikipedia page titles (with
+utf-8 encoding).  This script aims for the same number (nominally 10K) of articles
+for each word, but some words might have less if not enough articles can be found.
+I had to restart this process a few times due to uncaught pywikibot.data.api.APIError
+exceptions (TODO: implement automatic recovery from these).  The whole index-creation
+step takes about 6 hours.
 
-Next, use the following command to split the saved content into sentences and words, with punctuation removed and everything lower case:
+The next step is to download the content of all articles using:
 ```
-./merge_corpus.py
+./fetch_corpus_text.py
 ```
-The results are saved in a single compressed text file where the sentences for each topic
-appear in random order.
+This step is performed in parallel (using 20 processes by default) since it is IO bound.
+In case it fails for some reason, it can be restarted and will automatically skip over
+any words that have already been fetched.  The goal of the fetching step is to download
+~5M characters of plain (unicode) text for each code word.  This does not require
+downloading all of the indexed articles, so articles are processed in a random (but
+reproducible) order until at least 5M characters have been downloaded.
+
+The final step is to preprocess the downloaded text into a format suitable for
+feeding directly into word2vec training:
+- Split into sentences, one per line.
+- Remove markup headings (e.g., "== References ==").
+- Split into word tokens.
+- Combine compound words from the word list ("ice cream" -> "ice_cream").
+- Remove punctuation.
+- Convert to lower case.
+
+This step is performed using:
+```
+./preprocess_corpus.py
+```
+which converts each `corpus/Word.txt.gz` into a corresponding `corpus/Word.pre.gz`.
+Processing runs in a single process since it is relatively fast (~90 mins) and this
+simplifies collecting the summary statistics in the `freqs.dat` output file.
 
 Machine Learning
 ----------------
@@ -51,11 +79,19 @@ relationships. Run training with the command:
 ```
 In practice, this takes a while so I run several iterations using multiple cores in parallel, and split the work up into ~8 hour chunks:
 ```
-nohup ./learn.py --workers 18 -n 100 > learn1.log &
-nohup ./learn.py -o word2vec.dat.1 --workers 18 -n 100 --improve > learn2.log &
-nohup ./learn.py -o word2vec.dat.2 --workers 18 -n 100 --improve > learn3.log &
-nohup ./learn.py -o word2vec.dat.3 --workers 18 -n 100 --improve > learn4.log &
+nohup ./learn.py --workers 18 --npass 1 > learn1.log &
+nohup ./learn.py --workers 18 --npass 2 > learn2.log &
+nohup ./learn.py --workers 18 --npass 3 > learn3.log &
 ```
+Each job performs a random shuffle of the corpus followed by 10 epochs of training.
+The output from each job consists of 4 files (with N = npass):
+- word2vec.dat.N
+- word2vec.dat.N.syn0.npy
+- word2vec.dat.N.syn1.npy
+- word2vec.dat.N.syn1neg.npy
+
+The first file contains the vocabulary words and corresponding embedded vectors.
+The last three files contain the neural network weights.
 
 After training, run an evaluation suite of the embedding quality using:
 ```

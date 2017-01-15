@@ -141,7 +141,7 @@ class GameEngine(object):
 
     def play_computer_spymaster(self, gamma=1.0, verbose=True):
 
-        print('Thinking...')
+        say('Thinking...')
         sys.stdout.flush()
 
         # Loop over all permutations of words.
@@ -167,7 +167,7 @@ class GameEngine(object):
             self.print_board(spymaster=True)
             for i in order[:10]:
                 clue, words = saved_clues[i]
-                print('{0:.3f} {1} = {2}'.format(best_score[i], ' + '.join([w.upper() for w in words]), clue))
+                say(u'{0:.3f} {1} = {2}'.format(best_score[i], ' + '.join([w.upper() for w in words]), clue))
 
         clue, words = saved_clues[order[0]]
         self.unfound_words[self.player].update(words)
@@ -194,14 +194,14 @@ class GameEngine(object):
                 if count != UNLIMITED:
                     count = int(count)
                 return word, count
-            print('Invalid clue, should be WORD COUNT.')
+            say('Invalid clue, should be WORD COUNT.')
 
     def play_human_team(self, word, count):
 
         num_guesses = 0
         while (self.expert and count == UNLIMITED) or num_guesses < count + 1:
             self.print_board(clear_screen=(num_guesses == 0))
-            print('{0} your clue is: {1} {2}'.format(self.player_label, word, count))
+            say(u'{0} your clue is: {1} {2}'.format(self.player_label, word, count))
 
             num_guesses += 1
             while True:
@@ -212,19 +212,19 @@ class GameEngine(object):
                     return True
                 if guess in self.board[self.visible]:
                     break
-                print('Invalid guess, should be a visible word.')
+                say('Invalid guess, should be a visible word.')
 
             loc = np.where(self.board == guess)[0]
             self.visible[loc] = False
 
             if guess == self.assassin_word:
-                print('{0} You guessed the assasin - game over!'.format(self.player_label))
+                say('{0} You guessed the assasin - game over!'.format(self.player_label))
                 return False
 
             if guess in self.player_words:
                 self.unfound_words[self.player].discard(guess)
                 if num_guesses == len(self.player_words):
-                    print('{0} You won!!!'.format(self.player_label))
+                    say('{0} You won!!!'.format(self.player_label))
                     return False
                 else:
                     ask('{0} Congratulations, keep going! (hit ENTER)\n'.format(self.player_label))
@@ -277,9 +277,13 @@ class GameEngine(object):
             if not self.play_turn(spymaster2, team2): break
 
 
+def say(message):
+    sys.stdout.write((message + '\n').encode('utf8'))
+
+
 def ask(message):
     try:
         return raw_input(message)
     except KeyboardInterrupt:
-        print('\nBye.')
+        say('\nBye.')
         sys.exit(0)

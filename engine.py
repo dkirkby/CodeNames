@@ -1,4 +1,5 @@
 from __future__ import print_function, division
+import os
 
 import sys
 import re
@@ -8,11 +9,15 @@ import numpy as np
 
 import model
 
+CLUE_PATTERN = r'^([a-zA-Z]+) ({0})$'
+UNLIMITED = "unlimited"
 
+
+# noinspection PyAttributeOutsideInit
 class GameEngine(object):
 
-    def __init__(self, seed=None, init=None, wordlist='words.txt',
-                 model_name='word2vec.dat'):
+    def __init__(self, seed=None, expert=False,
+                 wordlist='words.txt', model_name='word2vec.dat'):
 
         # Load our word list if necessary.
         # TODO: Max length of 11 is hardcoded here and in print_board()
@@ -27,9 +32,15 @@ class GameEngine(object):
         # Initialize random numbers.
         self.generator = np.random.RandomState(seed=seed)
 
-        # Useful regular expressions.
-        self.valid_clue = re.compile('^([a-zA-Z]+) ([0-9])$')
+        # Register expert mode
+        self.expert = expert
+        self.unfound_words = (set(), set())
 
+        # Useful regular expressions.
+        if self.expert:
+            self.valid_clue = re.compile(CLUE_PATTERN.format("[0-9]|" + UNLIMITED))
+        else:
+            self.valid_clue = re.compile(CLUE_PATTERN.format("[0-9]"))
 
     def initialize_random_game(self, size=5):
 
@@ -43,15 +54,17 @@ class GameEngine(object):
         # Specify the layout for this game.
         assignments = self.generator.permutation(size * size)
         self.owner = np.empty(size * size, int)
-        self.owner[assignments[0]] = 0 # assassin
-        self.owner[assignments[1:10]] = 1 # first player
-        self.owner[assignments[10:19]] = 2 # second player
-        self.owner[assignments[19:]] = 3 # bystander
+        self.owner[assignments[0]] = 0  # assassin
+        self.owner[assignments[1:10]] = 1  # first player: 9 words
+        self.owner[assignments[10:18]] = 2  # second player: 8 words
+        self.owner[assignments[18:]] = 3  # bystander: 7 words
+
+        self.assassin_word = self.board[self.owner == 0]
 
         # All cards are initially visible.
         self.visible = np.ones_like(self.owner, dtype=bool)
-        self.num_turns = 0
 
+        self.num_turns = -1
 
     def initialize_from_words(self, initial_words, size=5):
         """
@@ -83,8 +96,7 @@ class GameEngine(object):
                 owner.append(group_index)
                 visible.append(True)
         if len(board) > size * size:
-            raise ValueError(
-                'Too many words. Expected <= {0}.'.format(size * size))
+            raise ValueError('Too many words. Expected <= {0}.'.format(size * size))
         # Add dummy hidden words if necessary.
         while len(board) < size * size:
             board.append('---')
@@ -101,14 +113,14 @@ class GameEngine(object):
         self.owner = self.owner[shuffle]
         self.visible = self.visible[shuffle]
 
-        # TEAM1 plays next.
-        self.num_turns = 0
-
+        self.assassin_word = self.board[self.owner == 0]
+        self.num_turns = -1
 
     def print_board(self, spymaster=False, clear_screen=True):
 
         if clear_screen:
             sys.stdout.write(chr(27) + '[2J')
+            # os.system('cls||clear')
 
         board = self.board.reshape(self.size, self.size)
         owner = self.owner.reshape(self.size, self.size)
@@ -127,127 +139,118 @@ class GameEngine(object):
                 sys.stdout.write('{0}{1:11s} '.format(tag, word))
             sys.stdout.write('\n')
 
-
     def play_computer_spymaster(self, gamma=1.0, verbose=True):
 
-        self.print_board(spymaster=True)
         print('Thinking...')
         sys.stdout.flush()
 
-        player = self.num_turns % 2
-        player_label = '<>'[player] * 3
-        player_words = self.board[(self.owner == player + 1) & self.visible]
-        avoid_words = self.board[
-            (self.owner > 0) & (self.owner != player + 1) & self.visible]
-        veto_words = self.board[(self.owner == 0) & self.visible]
-
         # Loop over all permutations of words.
-        num_words = len(player_words)
+        num_words = len(self.player_words)
         best_score, saved_clues = [], []
         for count in range(num_words, 0, -1):
             # Multiply similarity scores by this factor for any clue
             # corresponding to this many words.
             bonus_factor = count ** gamma
             for group in itertools.combinations(range(num_words), count):
-                words = player_words[list(group)]
-                clue, score = self.model.get_clue(
-                    words, player_words, avoid_words, veto_words)
+                words = self.player_words[list(group)]
+                clue, score = self.model.get_clue(clue_words=words,
+                                                  pos_words=self.player_words,
+                                                  neg_words=np.concatenate((self.opponent_words, self.neutral_words)),
+                                                  veto_words=self.assassin_word)
                 if clue:
                     best_score.append(score * bonus_factor)
                     saved_clues.append((clue, words))
         num_clues = len(saved_clues)
-        order = sorted(xrange(num_clues),
-                       key=lambda k: best_score[k], reverse=True)
+        order = sorted(xrange(num_clues), key=lambda k: best_score[k], reverse=True)
+
         if verbose:
+            self.print_board(spymaster=True)
             for i in order[:10]:
                 clue, words = saved_clues[i]
-                print('{0:.3f} {1} = {2}'.format(
-                    best_score[i], ' + '.join([w.upper() for w in words]), clue))
-
-        try:
-            raw_input('Hit ENTER to continue...')
-        except KeyboardInterrupt:
-            print('\nBye.')
-            sys.exit(0)            
+                print('{0:.3f} {1} = {2}'.format(best_score[i], ' + '.join([w.upper() for w in words]), clue))
 
         clue, words = saved_clues[order[0]]
-        return clue, len(words)
+        self.unfound_words[self.player].update(words)
+        if self.expert and self._should_say_unlimited(nb_clue_words=len(words)):
+            return clue, UNLIMITED
+        else:
+            return clue, len(words)
 
+    def _should_say_unlimited(self, nb_clue_words, threshold_opponent=2):
+        return (len(self.opponent_words) <= threshold_opponent  # the opposing team risks winning with their next clue, and
+                and nb_clue_words + 1 < len(self.player_words)  # our +1 guess isn't enough to catch up during this clue,
+                # but all the words hinted by the current and previous clues are enough to catch up and win
+                and self.unfound_words[self.player] == set(self.player_words))
 
     def play_human_spymaster(self):
 
         self.print_board(spymaster=True)
 
-        player = self.num_turns % 2
-        player_label = '<>'[player] * 3
         while True:
-            try:
-                clue = raw_input('{0} Enter your clue: '.format(player_label))
-            except KeyboardInterrupt:
-                print('\nBye.')
-                sys.exit(0)
+            clue = ask('{0} Enter your clue: '.format(self.player_label))
             matched = self.valid_clue.match(clue)
             if matched:
                 word, count = matched.groups()
-                count = int(count)
+                if count != UNLIMITED:
+                    count = int(count)
                 return word, count
             print('Invalid clue, should be WORD COUNT.')
 
-
     def play_human_team(self, word, count):
 
-        player = self.num_turns % 2
-        player_label = '<>'[player] * 3
-        player_words = set(
-            self.board[(self.owner == player + 1) & self.visible])
-        assasin = self.board[self.owner == 0]
-
         num_guesses = 0
-        while num_guesses <= count + 1:
-            self.print_board(spymaster=False)
-            print('{0} your clue is: {1} {2}'.format(player_label, word, count))
-            num_guesses += 1
+        while (self.expert and count == UNLIMITED) or num_guesses < count + 1:
+            self.print_board(clear_screen=(num_guesses == 0))
+            print('{0} your clue is: {1} {2}'.format(self.player_label, word, count))
 
+            num_guesses += 1
             while True:
-                try:
-                    guess = raw_input('{0} enter your guess #{1}: '
-                                      .format(player_label, num_guesses))
-                except KeyboardInterrupt:
-                    print('\nBye.')
-                    sys.exit(0)
+                guess = ask('{0} enter your guess #{1}: '.format(self.player_label, num_guesses))
                 guess = guess.strip().lower().replace(' ', '_')
-                if guess == '' or guess in self.board[self.visible]:
+                if guess == '':
+                    # Team does not want to make any more guesses.
+                    return True
+                if guess in self.board[self.visible]:
                     break
                 print('Invalid guess, should be a visible word.')
-
-            if guess == '':
-                # Team does not want to make any more guesses.
-                return True
 
             loc = np.where(self.board == guess)[0]
             self.visible[loc] = False
 
-            if guess == assasin:
-                print('{0} You guessed the assasin - game over!'
-                      .format(player_label))
+            if guess == self.assassin_word:
+                print('{0} You guessed the assasin - game over!'.format(self.player_label))
                 return False
 
-            if guess in player_words:
-                player_words.remove(guess)
-                if player_words:
-                    print('{0} Congratulations, keep going!'
-                          .format(player_label))
-                else:
-                    print('{0} You won!!!'.format(player_label))
+            if guess in self.player_words:
+                self.unfound_words[self.player].discard(guess)
+                if num_guesses == len(self.player_words):
+                    print('{0} You won!!!'.format(self.player_label))
                     return False
+                else:
+                    ask('{0} Congratulations, keep going! (hit ENTER)\n'.format(self.player_label))
             else:
-                print('{0} Sorry!'.format(player_label))
+                if guess in self.opponent_words:
+                    ask('{0} Sorry, word from opposing team! (hit ENTER)\n'.format(self.player_label))
+                else:
+                    ask('{0} Sorry, bystander! (hit ENTER)\n'.format(self.player_label))
                 break
 
         return True
 
+    def next_turn(self):
+        self.num_turns += 1
+
+        self.player = self.num_turns % 2
+        self.opponent = (self.player + 1) % 2
+
+        self.player_label = '<>'[self.player] * 3
+        self.player_words = self.board[(self.owner == self.player + 1) & self.visible]
+        self.opponent_words = self.board[(self.owner == self.opponent + 1) & self.visible]
+        self.neutral_words = self.board[(self.owner == 3) & self.visible]
 
     def play_turn(self, spymaster='human', team='human'):
+
+        self.next_turn()
 
         if spymaster == 'human':
             word, count = self.play_human_spymaster()
@@ -259,9 +262,7 @@ class GameEngine(object):
         else:
             raise NotImplementedError()
 
-        self.num_turns += 1
         return ongoing
-
 
     def play_game(self, spymaster1='human', team1='human',
                   spymaster2='human', team2='human', init=None):
@@ -270,6 +271,15 @@ class GameEngine(object):
             self.initialize_random_game()
         else:
             self.initialize_from_words(init)
+
         while True:
             if not self.play_turn(spymaster1, team1): break
             if not self.play_turn(spymaster2, team2): break
+
+
+def ask(message):
+    try:
+        return raw_input(message)
+    except KeyboardInterrupt:
+        print('\nBye.')
+        sys.exit(0)

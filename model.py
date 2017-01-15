@@ -113,7 +113,7 @@ class WordEmbedding(object):
             if min_clue_cosine < max_min_cosine:
                 continue
             # Are all positive words more similar than any negative words?
-            if neg_words:
+            if list(neg_words):
                 max_neg_cosine = np.max(neg_cosine)
                 if max_neg_cosine >= min_clue_cosine:
                     # A negative word is likely to be selected before all the
@@ -124,7 +124,7 @@ class WordEmbedding(object):
                               .format(neg_word, max_neg_cosine))
                     continue
             # Is this word too similar to any of the veto words?
-            if veto_words:
+            if list(veto_words):
                 max_veto_cosine = np.max(veto_cosine)
                 if max_veto_cosine >= min_clue_cosine - veto_margin:
                     # A veto word is too likely to be selected before all the

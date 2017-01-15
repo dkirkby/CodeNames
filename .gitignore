@@ -1,4 +1,7 @@
 corpus/
+corpus.txt.gz
+word2vec.dat
+word2vec.dat.*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -89,3 +92,7 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# IntelliJ IDEA
+*.iml
+.idea/

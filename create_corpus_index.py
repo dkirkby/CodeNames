@@ -61,6 +61,9 @@ def main():
         words = [w.strip().capitalize() for w in f]
     print('Read {0} words from {1}.'.format(len(words), args.input))
 
+    if not os.path.isdir(CORPUS_DIRECTORY):
+        os.mkdir(CORPUS_DIRECTORY)
+
     # Use the english wikipedia with no user config and ignore warnings.
     os.environ['PYWIKIBOT2_NO_USER_CONFIG'] = '2'
     import pywikibot

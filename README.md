@@ -93,10 +93,113 @@ The output from each job consists of 4 files (with N = npass):
 The first file contains the vocabulary words and corresponding embedded vectors.
 The last three files contain the neural network weights.
 
-After training, run an evaluation suite of the embedding quality using:
+After training, run an evaluation suite of the embedding quality using, e.g.
 ```
-./evaluate.py -i word2vec.dat.4 --top-singles 10 --top-pairs 10 --save-plots
+./evaluate.py -i word2vec.dat.4 --top-singles 20 --top-pairs 20 --save-plots
 ```
+Results for single-word matches after the first job (10 epochs) are:
+```
+0.972 MARCH = april
+0.931 FLUTE = clarinet
+0.910 PIANO = violin
+0.891 GOLD = silver
+0.867 PISTOL = semi-automatic
+0.852 CHOCOLATE = caramel
+0.848 PANTS = trousers
+0.845 MISSILE = surface-to-air
+0.843 BERLIN = munich
+0.840 TOKYO = osaka
+0.837 DEGREE = bachelor
+0.830 WHALE = humpback
+0.828 CHURCH = episcopal
+0.828 KETCHUP = mayonnaise
+0.824 COURT = supreme
+0.823 SERVER = client
+0.823 THUMB = finger
+0.821 JUPITER = neptune
+0.814 GERMANY = austria
+0.814 DISEASE = infection
+```
+then after four jobs (40 epochs):
+```
+0.975 MARCH = april
+0.909 FLUTE = clarinet
+0.906 PIANO = violin
+0.888 GOLD = silver
+0.883 CHOCOLATE = caramel
+0.853 WHALE = humpback
+0.849 TOKYO = osaka
+0.848 PANTS = shirt
+0.831 DEGREE = bachelor
+0.829 MISSILE = ballistic
+0.828 CHINA = taiwan
+0.826 PISTOL = rifle
+0.826 EMBASSY = consulate
+0.823 BERLIN = munich
+0.822 GERMANY = austria
+0.821 KETCHUP = mayonnaise
+0.817 CZECH = slovak
+0.814 COPPER = zinc
+0.809 DRESS = attire
+0.809 JUPITER = uranus
+```
+Most of the code words are the same, but with some different clues, e.g.
+- PISTOL: semi-automatic -> rifle
+- PANTS: trousers -> shirt
+- MISSILE: surface-to-air -> ballistic
+- JUPITER: neptune -> uranus
+
+For pairs, the pass-1 results are:
+```
+0.849 PIANO + FLUTE = cello
+0.805 PANTS + DRESS = trousers
+0.755 LEMON + CHOCOLATE = vanilla
+0.751 GERMANY + FRANCE = belgium
+0.750 HORSESHOE + BAT = rhinolophus
+0.729 STRING + PIANO = quartet
+0.723 ICE_CREAM + CHOCOLATE = candy
+0.719 PASTE + KETCHUP = garlic
+0.718 WEB + SERVER = browser
+0.709 TURKEY + GREECE = cyprus
+0.707 HOTEL + CASINO = resort
+0.703 ORGAN + FLUTE = harpsichord
+0.703 PIANO + ORGAN = harpsichord
+0.699 RABBIT + DOG = cat
+0.696 PIANO + HORN = flute
+0.690 STRING + FLUTE = violin
+0.686 SCHOOL + DEGREE = graduate
+0.679 HORN + FLUTE = trumpet
+0.678 MOON + JUPITER = venus
+0.672 GERMANY + CZECH = poland
+```
+and after pass-4:
+```
+0.826 PIANO + FLUTE = cello
+0.799 PANTS + DRESS = trousers
+0.748 HORSESHOE + BAT = rhinolophus
+0.742 ICE_CREAM + CHOCOLATE = candy
+0.733 GERMANY + FRANCE = belgium
+0.733 LEMON + CHOCOLATE = vanilla
+0.711 PASTE + KETCHUP = sauce
+0.707 TURKEY + GREECE = cyprus
+0.705 GERMANY + CZECH = hungary
+0.701 EUROPE + AFRICA = asia
+0.701 PIANO + ORGAN = harmonium
+0.694 STRING + PIANO = quartet
+0.694 GREECE + FRANCE = italy
+0.694 GREECE + GERMANY = italy
+0.692 ORGAN + FLUTE = harmonium
+0.688 STRING + FLUTE = violin
+0.686 RABBIT + DOG = cat
+0.678 WEB + SERVER = browser
+0.676 LEMON + ICE_CREAM = flavored
+0.676 CHEST + ARM = shoulder
+```
+Again, many of the code words are the same with some new clues:
+- PASTE + KETCHUP: garlic -> sauce
+- ORGAN + FLUTE: harpsichord -> harmonium
+- PIANO + ORGAN: harpsichord -> harmonium
+- GERMANY + CZECH: poland -> hungary
 
 Play
 ----

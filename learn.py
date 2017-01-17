@@ -20,11 +20,9 @@ def main():
     parser.add_argument('-o', '--output', type=str, default='word2vec.dat',
                         help='File name for saved model.')
     parser.add_argument('--npass', type=int, default=1,
-                        help='Perform this pass number.')
-    parser.add_argument('--num-epochs', type=int, default=10,
-                        help='Number of training epochs to run.')
-    parser.add_argument('--improve', action='store_true',
-                        help='Continue to improve learning.')
+                        help='Perform this pass number (1-5).')
+    parser.add_argument('--num-epochs', type=int, default=5,
+                        help='Number of training epochs to run per pass.')
     parser.add_argument('--dimension', type=int, default=300,
                         help='Dimension of word vectors to learn.')
     parser.add_argument('--min-count', type=int, default=150,

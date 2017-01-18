@@ -1,12 +1,14 @@
 #!/usr/bin/env python
+# coding=utf-8
 from __future__ import print_function, division
 
 import argparse
 import io
 import os
 import os.path
+from functools import partial
 
-CORPUS_DIRECTORY='corpus'
+CORPUS_DIRECTORY = 'corpus'
 
 # Maximum number of wikipedia articles to index per word. Can be
 # overridden using the --max-size command-line argument.
@@ -70,37 +72,43 @@ def main():
     site = pywikibot.Site('en', 'wikipedia')
 
     for word in words:
+        out_name = os.path.join(CORPUS_DIRECTORY, '{0}.index'.format(word))
 
-        page_titles = set()
-        try:
-            # Try to ingest the page for this word directly.
-            page = pywikibot.Page(site, word)
-            page_titles = ingest(page, page_titles)
-
-            # Try to ingest a disambiguation page for this word.
-            if not page.isDisambig():
-                page = pywikibot.Page(site, word + ' (disambiguation)')
+        if os.path.isfile(out_name):
+            with io.open(out_name, 'r', encoding=args.encoding) as existing:
+                lines = sum(chunk.count('\n')
+                            for chunk in iter(partial(existing.read, 2**16), ''))
+            print('File {0} already exists ({1} lines), skipping it.'
+                  .format(out_name, lines))
+        else:
+            page_titles = set()
+            try:
+                # Try to ingest the page for this word directly.
+                page = pywikibot.Page(site, word)
                 page_titles = ingest(page, page_titles)
 
-            # Try to ingest the results of a site-wide search for this word.
-            # Only include results in the Main namespace.
-            results = site.search(
-                searchstring=word, where='text', namespaces=[0])
-            for page in results:
-                page_titles = ingest(page, page_titles, depth=1)
-        except StopIteration:
-            # We normally get here once 10,000 pages have been ingested.
-            pass
+                # Try to ingest a disambiguation page for this word.
+                if not page.isDisambig():
+                    page = pywikibot.Page(site, word + ' (disambiguation)')
+                    page_titles = ingest(page, page_titles)
 
-        # Save the set of all ingested page names for this word.
-        out_name = os.path.join(CORPUS_DIRECTORY, '{0}.index'.format(word))
-        with io.open(out_name, 'w', encoding=args.encoding) as out:
-            for title in page_titles:
-                out.write(title + '\n')
+                # Try to ingest the results of a site-wide search for this word.
+                # Only include results in the Main namespace.
+                results = site.search(
+                    searchstring=word, where='text', namespaces=[0])
+                for page in results:
+                    page_titles = ingest(page, page_titles, depth=1)
+            except StopIteration:
+                # We normally get here once 10,000 pages have been ingested.
+                pass
 
-        print('Saved index of {0} pages to {1}.'
-              .format(len(page_titles), out_name))
+            # Save the set of all ingested page names for this word.
+            with io.open(out_name, 'w', encoding=args.encoding) as out:
+                for title in page_titles:
+                    out.write(title + '\n')
 
+            print('Saved index of {0} pages to {1}.'
+                  .format(len(page_titles), out_name))
 
 if __name__ == '__main__':
     main()

@@ -20,11 +20,9 @@ def main():
     parser.add_argument('-o', '--output', type=str, default='word2vec.dat',
                         help='File name for saved model.')
     parser.add_argument('--npass', type=int, default=1,
-                        help='Perform this pass number.')
-    parser.add_argument('--num-epochs', type=int, default=10,
-                        help='Number of training epochs to run.')
-    parser.add_argument('--improve', action='store_true',
-                        help='Continue to improve learning.')
+                        help='Perform this pass number (1-5).')
+    parser.add_argument('--num-epochs', type=int, default=5,
+                        help='Number of training epochs to run per pass.')
     parser.add_argument('--dimension', type=int, default=300,
                         help='Dimension of word vectors to learn.')
     parser.add_argument('--min-count', type=int, default=150,
@@ -108,6 +106,15 @@ def main():
     # Use the training sentences for this pass.
     sentences = gensim.models.word2vec.LineSentence(corpus_name)
 
+    # Calculate start and stop learning rates for this pass.
+    alpha_start = 0.025 - 0.005 * (args.npass - 1.) + 0.0001
+    alpha_stop = 0.025 - 0.005 * args.npass + 0.0001
+    if alpha_stop <= 0:
+        print('Invalid npass gives negative learning rate.')
+        return -1
+    logger.info('Learning rate: {0:.4f} -> {1:.4f}'
+                .format(alpha_start, alpha_stop))
+
     if args.npass > 1:
         # Load a previously trained model.
         prev_name = '{0}.{1}'.format(args.output, args.npass - 1)
@@ -115,6 +122,8 @@ def main():
         # Update parameters from the command line.
         model.workers = args.workers
         model.iter = args.num_epochs
+        model.alpha = alpha_start
+        model.min_alpha = alpha_stop
         # Continue training.
         model.train(sentences)
     else:
@@ -122,6 +131,7 @@ def main():
         model = gensim.models.word2vec.Word2Vec(
             sentences, size=args.dimension, window=args.max_distance,
             min_count=args.min_count, workers=args.workers,
+            alpha=alpha_start, min_alpha=alpha_stop,
             sg=1, hs=1, iter=args.num_epochs)
 
     # Save the updated model after this pass.

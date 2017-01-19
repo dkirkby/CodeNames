@@ -77,14 +77,18 @@ relationships. Run training with the command:
 ```
 ./learn.py
 ```
-In practice, this takes a while so I run several iterations using multiple cores in parallel, and split the work up into ~8 hour chunks:
+In practice, this takes a while (~30 hours total) so we run five consecutive
+passes using 20 cores in parallel:
 ```
-nohup ./learn.py --workers 18 --npass 1 > learn1.log &
-nohup ./learn.py --workers 18 --npass 2 > learn2.log &
-nohup ./learn.py --workers 18 --npass 3 > learn3.log &
+nohup ./learn.py --workers 20 --npass 1 > learn1.log &
+nohup ./learn.py --workers 20 --npass 2 > learn2.log &
+nohup ./learn.py --workers 20 --npass 3 > learn3.log &
+nohup ./learn.py --workers 20 --npass 4 > learn4.log &
+nohup ./learn.py --workers 20 --npass 5 > learn5.log &
 ```
-Each job performs a random shuffle of the corpus followed by 10 epochs of training.
-The output from each job consists of 4 files (with N = npass):
+Each pass starts with a random shuffle of the corpus followed by 5 epochs of training,
+with a learning rate that decreases linearly from 0.0251 to 0.0001 over the 5 passes.
+The output from each job consists of 4 files (with N = 1-5):
 - word2vec.dat.N
 - word2vec.dat.N.syn0.npy
 - word2vec.dat.N.syn1.npy

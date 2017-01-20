@@ -1,0 +1,6 @@
+{
+  "corpus_directory": "corpus",
+  "word_list":        "words.txt",
+  "embedding":        "word2vec.dat",
+  "encoding":         "utf8"
+}

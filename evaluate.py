@@ -1,19 +1,23 @@
 #!/usr/bin/env python
+# coding=utf-8
 from __future__ import print_function, division
 
 import argparse
+import glob
+import os
 
 import model
+from config import config
 
 
 def main():
     parser = argparse.ArgumentParser(
         description='Evaluate word embedding.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-i', '--input', type=str, default='word2vec.dat',
-                        help='Name of saved model to read.')
-    parser.add_argument('--wordlist', type=str, default='words.txt',
-                        help='Name of word list to use.')
+    parser.add_argument('--npass', type=int,
+        help='Evaluate this pass number (if not set: evaluate {0} if it is '
+                        'present, or the last {0}.N in numerical order if not)'
+                        .format(config.embedding))
     parser.add_argument('--top-singles', type=int, default=10,
                         help='Show top single matches.')
     parser.add_argument('--top-pairs', type=int, default=0,
@@ -28,9 +32,22 @@ def main():
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
 
-    embedding = model.WordEmbedding(args.input)
+    if args.npass is not None:
+        evaluated_file = '{0}.{1}'.format(config.embedding, args.npass)
+    elif os.path.isfile(config.embedding):
+        evaluated_file = config.embedding
+    else:
+        all_suffixes = [f.split('.')[-1]
+                        for f in glob.glob('{0}.*'.format(config.embedding))]
+        evaluated_file = '{0}.{1}'.format(config.embedding,
+                                          sorted(all_suffixes)[-1])
 
-    with open(args.wordlist, 'r') as f:
+    if not os.path.isfile(evaluated_file):
+        print('Embedding file {0} not found.'.format(evaluated_file))
+
+    embedding = model.WordEmbedding(evaluated_file)
+
+    with open(config.word_list, 'r') as f:
         words = [w.strip().lower().replace(' ', '_') for w in f]
 
     if args.top_singles > 0:

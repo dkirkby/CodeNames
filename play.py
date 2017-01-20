@@ -13,8 +13,6 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-c', '--config', type=str, default='CHCH',
                         help='Config <spy1><team1><spy2><team2> using C,H.')
-    parser.add_argument('-e', '--embedding', type=str, default='word2vec.dat',
-                        help='Word embedding to use for the AI.')
     parser.add_argument('-x', '--expert', action='store_true',
                         help='Expert clues. For now implements \'unlimited\' only.')
     parser.add_argument('--seed', type=int, default=None,
@@ -33,8 +31,7 @@ def main():
     spy2 = d[args.config[2]]
     team2 = d[args.config[3]]
 
-    e = engine.GameEngine(
-        seed=args.seed, expert=args.expert, model_name=args.embedding)
+    e = engine.GameEngine(seed=args.seed, expert=args.expert)
     e.play_game(spy1, team1, spy2, team2, init=args.init)
 
 

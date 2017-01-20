@@ -8,17 +8,13 @@ import random
 import gzip
 import os.path
 
-CORPUS_DIRECTORY='corpus'
+from config import config
 
 
 def main():
     parser = argparse.ArgumentParser(
         description='Merge training corpus.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-i', '--input', type=str, default='words.txt',
-                        help='Name of word list to use.')
-    parser.add_argument('-o', '--output', type=str, default='word2vec.dat',
-                        help='File name for saved model.')
     parser.add_argument('--npass', type=int, default=1,
                         help='Perform this pass number (1-5).')
     parser.add_argument('--num-epochs', type=int, default=5,
@@ -46,16 +42,13 @@ def main():
     # Look for an existing corpus for this pass.
     corpus_name = 'corpus_{0}.gz'.format(args.npass)
     if os.path.exists(corpus_name):
-
         logger.info('Using corpus {0}'.format(corpus_name))
-
     else:
-
         # Read the wordlist into memory.
-        with open(args.input, 'r') as f:
+        with open(config.word_list, 'r') as f:
             wordlist = [w.strip().capitalize() for w in f]
         logger.info('Read {0} words from {1}.'
-                    .format(len(wordlist), args.input))
+                    .format(len(wordlist), config.word_list))
 
         # Open the output corpus file for this pass.
         f_out = gzip.open(corpus_name, 'wb')
@@ -71,14 +64,14 @@ def main():
             sentences = []
             # Read content for the first word of this pair into memory.
             in_name = os.path.join(
-                CORPUS_DIRECTORY, '{0}.pre.gz'.format(wordlist[i]))
+                config.corpus_directory, '{0}.pre.gz'.format(wordlist[i]))
             with gzip.open(in_name, 'rb') as f_in:
                 for line in f_in:
                     sentences.append(line)
             # The last "pair" might be a single.
             if i < len(wordlist) - 1:
                 in_name = os.path.join(
-                    CORPUS_DIRECTORY, '{0}.pre.gz'.format(wordlist[i+1]))
+                    config.corpus_directory, '{0}.pre.gz'.format(wordlist[i+1]))
                 # Read content for the second word of this pair into memory.
                 with gzip.open(in_name, 'rb') as f_in:
                     for line in f_in:
@@ -117,7 +110,7 @@ def main():
 
     if args.npass > 1:
         # Load a previously trained model.
-        prev_name = '{0}.{1}'.format(args.output, args.npass - 1)
+        prev_name = '{0}.{1}'.format(config.embedding, args.npass - 1)
         model = gensim.models.word2vec.Word2Vec.load(prev_name)
         # Update parameters from the command line.
         model.workers = args.workers
@@ -135,7 +128,7 @@ def main():
             sg=1, hs=1, iter=args.num_epochs)
 
     # Save the updated model after this pass.
-    save_name = '{0}.{1}'.format(args.output, args.npass)
+    save_name = '{0}.{1}'.format(config.embedding, args.npass)
     model.save(save_name)
 
 

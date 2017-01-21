@@ -64,14 +64,16 @@ def main():
             sentences = []
             # Read content for the first word of this pair into memory.
             in_name = os.path.join(
-                config.corpus_directory, '{0}.pre.gz'.format(wordlist[i]))
+                config.corpus_directory,
+                config.template['preprocess'].format(wordlist[i]))
             with gzip.open(in_name, 'rb') as f_in:
                 for line in f_in:
                     sentences.append(line)
             # The last "pair" might be a single.
             if i < len(wordlist) - 1:
                 in_name = os.path.join(
-                    config.corpus_directory, '{0}.pre.gz'.format(wordlist[i+1]))
+                    config.corpus_directory,
+                    config.template['preprocess'].format(wordlist[i+1]))
                 # Read content for the second word of this pair into memory.
                 with gzip.open(in_name, 'rb') as f_in:
                     for line in f_in:

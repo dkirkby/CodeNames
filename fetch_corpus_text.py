@@ -22,8 +22,8 @@ def fetch(word, min_size=5e6):
     # Use a reproducible but different "random" shuffle for each word.
     random.seed(word)
 
-    in_name = os.path.join(config.corpus_directory, '{0}.index'.format(word))
-    out_name = os.path.join(config.corpus_directory, '{0}.txt.gz'.format(word))
+    in_name = os.path.join(config.corpus_directory, config.template['index'].format(word))
+    out_name = os.path.join(config.corpus_directory, config.template['articles'].format(word))
 
     # Has this word already been fetched?
     if os.path.exists(out_name):

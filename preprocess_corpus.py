@@ -47,12 +47,12 @@ def main():
 
         freq_key = word.lower().replace(' ', '_')
 
-        in_name = os.path.join(config.corpus_directory, '{0}.txt.gz'.format(word))
+        in_name = os.path.join(config.corpus_directory, config.template['articles'].format(word))
         if not os.path.exists(in_name):
             print('Skipping missing file {0}'.format(in_name))
             continue
 
-        out_name = os.path.join(config.corpus_directory, '{0}.pre.gz'.format(word))
+        out_name = os.path.join(config.corpus_directory, config.template['preprocess'].format(word))
         num_sentences, num_words = 0, 0
 
         with gzip.open(in_name, 'rb') as f_in:

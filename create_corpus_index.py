@@ -68,7 +68,7 @@ def main():
     site = pywikibot.Site('en', 'wikipedia')
 
     for word in words:
-        out_name = os.path.join(config.corpus_directory, '{0}.index'.format(word))
+        out_name = os.path.join(config.corpus_directory, config.template['index'].format(word))
 
         if os.path.isfile(out_name):
             with io.open(out_name, 'r', encoding=config.encoding) as existing:

@@ -1,3 +1,4 @@
+# coding=utf-8
 from __future__ import print_function, division
 
 import itertools
@@ -13,6 +14,7 @@ from config import config
 
 CLUE_PATTERN = r'^([a-zA-Z]+) ({0})$'
 UNLIMITED = "unlimited"
+REPEAT_PENALTY = 0.1
 
 
 # noinspection PyAttributeOutsideInit
@@ -41,6 +43,9 @@ class GameEngine(object):
             self.valid_clue = re.compile(CLUE_PATTERN.format("[0-9]|" + UNLIMITED))
         else:
             self.valid_clue = re.compile(CLUE_PATTERN.format("[0-9]"))
+
+        # Keeping the list of given clues
+        self.clues = ([], [])
 
     def initialize_random_game(self, size=5):
 
@@ -155,13 +160,22 @@ class GameEngine(object):
             bonus_factor = count ** gamma
             for group in itertools.combinations(range(num_words), count):
                 words = self.player_words[list(group)]
-                clue, score = self.model.get_clue(clue_words=words,
-                                                  pos_words=self.player_words,
-                                                  neg_words=np.concatenate((self.opponent_words, self.neutral_words)),
-                                                  veto_words=self.assassin_word)
+                clue, score = self.model.get_clue(
+                    clue_words=words,
+                    pos_words=self.player_words,
+                    neg_words=np.concatenate((self.opponent_words,
+                                              self.neutral_words)),
+                    veto_words=self.assassin_word)
                 if clue:
                     best_score.append(score * bonus_factor)
                     saved_clues.append((clue, words))
+
+        for i, (clue, _) in enumerate(saved_clues):
+            if clue in self.clues[self.player]:
+                # apply penalty once for each time the clue was already given
+                best_score[i] -= \
+                    REPEAT_PENALTY * self.clues[self.player].count(clue)
+
         num_clues = len(saved_clues)
         order = sorted(xrange(num_clues), key=lambda k: best_score[k], reverse=True)
 
@@ -169,9 +183,14 @@ class GameEngine(object):
             self.print_board(spymaster=True)
             for i in order[:10]:
                 clue, words = saved_clues[i]
-                say(u'{0:.3f} {1} = {2}'.format(best_score[i], ' + '.join([w.upper() for w in words]), clue))
+                say(u'{0:.3f} {1} = {2}{3}'.format(
+                    best_score[i],
+                    ' + '.join([w.upper() for w in words]),
+                    clue,
+                    ' (repeated)' if clue in self.clues[self.player] else ''))
 
         clue, words = saved_clues[order[0]]
+        self.clues[self.player].append(clue)
         self.unfound_words[self.player].update(words)
         if self.expert and self._should_say_unlimited(nb_clue_words=len(words)):
             return clue, UNLIMITED
@@ -210,6 +229,7 @@ class GameEngine(object):
         num_guesses = 0
         while (self.expert and count == UNLIMITED) or num_guesses < count + 1:
             self.print_board(clear_screen=(num_guesses == 0))
+            print(self.clues[self.player])
             say(u'{0} your clue is: {1} {2}'.format(self.player_label, word, count))
 
             num_guesses += 1

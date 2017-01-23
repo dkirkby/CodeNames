@@ -3,6 +3,8 @@ from __future__ import print_function, division
 import itertools
 import re
 import sys
+import os
+import platform
 
 import numpy as np
 
@@ -20,11 +22,9 @@ class GameEngine(object):
 
         # Load our word list if necessary.
         # TODO: Max length of 11 is hardcoded here and in print_board()
-        # TODO: number of words is hardcoded too !
-        self.words = np.empty(400, dtype='S11')
         with open(config.word_list) as f:
-            for i, line in enumerate(f.readlines()):
-                self.words[i] = line.rstrip().lower().replace(' ', '_')
+            _words = [line.rstrip().lower().replace(' ', '_') for line in f.readlines()]
+        self.words = np.array(_words, dtype='S11')
 
         # Initialize our word embedding model if necessary.
         self.model = model.WordEmbedding(config.embedding)
@@ -119,8 +119,10 @@ class GameEngine(object):
     def print_board(self, spymaster=False, clear_screen=True):
 
         if clear_screen:
-            sys.stdout.write(chr(27) + '[2J')
-            # os.system('cls||clear')
+            if platform.system() == 'Windows':
+                os.system('cls')
+            else:
+                sys.stdout.write(chr(27) + '[2J')
 
         board = self.board.reshape(self.size, self.size)
         owner = self.owner.reshape(self.size, self.size)

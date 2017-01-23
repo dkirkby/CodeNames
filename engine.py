@@ -19,7 +19,6 @@ REPEAT_PENALTY = 0.1
 
 # noinspection PyAttributeOutsideInit
 class GameEngine(object):
-
     def __init__(self, seed=None, expert=False):
 
         # Load our word list if necessary.
@@ -153,7 +152,7 @@ class GameEngine(object):
 
         # Loop over all permutations of words.
         num_words = len(self.player_words)
-        best_score, saved_clues = [], []
+        found_clues = []
         for count in range(num_words, 0, -1):
             # Multiply similarity scores by this factor for any clue
             # corresponding to this many words.
@@ -167,31 +166,29 @@ class GameEngine(object):
                                               self.neutral_words)),
                     veto_words=self.assassin_word)
                 if clue:
-                    best_score.append(score * bonus_factor)
-                    saved_clues.append((clue, words))
+                    found_clues.append([score * bonus_factor, clue, words])
 
-        for i, (clue, _) in enumerate(saved_clues):
+        for i, (score, clue, _) in enumerate(found_clues):
             if clue in self.clues[self.player]:
-                # apply penalty once for each time the clue was already given
-                best_score[i] -= \
+                # apply penalty once for each time the clue was already given
+                found_clues[i][0] -= \
                     REPEAT_PENALTY * self.clues[self.player].count(clue)
 
-        num_clues = len(saved_clues)
-        order = sorted(xrange(num_clues), key=lambda k: best_score[k], reverse=True)
+        found_clues.sort(key=lambda (score, _, __): score, reverse=True)
 
         if verbose:
             self.print_board(spymaster=True)
-            for i in order[:10]:
-                clue, words = saved_clues[i]
+            for score, clue, words in found_clues[:10]:
                 say(u'{0:.3f} {1} = {2}{3}'.format(
-                    best_score[i],
+                    score,
                     ' + '.join([w.upper() for w in words]),
                     clue,
                     ' (repeated)' if clue in self.clues[self.player] else ''))
 
-        clue, words = saved_clues[order[0]]
+        score, clue, words = found_clues[0]
         self.clues[self.player].append(clue)
         self.unfound_words[self.player].update(words)
+
         if self.expert and self._should_say_unlimited(nb_clue_words=len(words)):
             return clue, UNLIMITED
         else:
@@ -208,7 +205,7 @@ class GameEngine(object):
         return (len(self.opponent_words) <= threshold_opponent  # (1)
                 and nb_clue_words + 1 < len(self.player_words)  # (2)
                 and self.unfound_words[self.player]
-                                    == set(self.player_words))  # (3)
+                == set(self.player_words))  # (3)
 
     def play_human_spymaster(self):
 
@@ -229,7 +226,6 @@ class GameEngine(object):
         num_guesses = 0
         while (self.expert and count == UNLIMITED) or num_guesses < count + 1:
             self.print_board(clear_screen=(num_guesses == 0))
-            print(self.clues[self.player])
             say(u'{0} your clue is: {1} {2}'.format(self.player_label, word, count))
 
             num_guesses += 1

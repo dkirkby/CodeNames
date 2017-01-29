@@ -1,13 +1,15 @@
 from __future__ import print_function, division
-import os
 
-import sys
-import re
 import itertools
+import re
+import sys
+import os
+import platform
 
 import numpy as np
 
 import model
+from config import config
 
 CLUE_PATTERN = r'^([a-zA-Z]+) ({0})$'
 UNLIMITED = "unlimited"
@@ -16,18 +18,16 @@ UNLIMITED = "unlimited"
 # noinspection PyAttributeOutsideInit
 class GameEngine(object):
 
-    def __init__(self, seed=None, expert=False,
-                 wordlist='words.txt', model_name='word2vec.dat'):
+    def __init__(self, seed=None, expert=False):
 
         # Load our word list if necessary.
         # TODO: Max length of 11 is hardcoded here and in print_board()
-        self.words = np.empty(400, dtype='S11')
-        with open(wordlist) as f:
-            for i, line in enumerate(f.readlines()):
-                self.words[i] = line.rstrip().lower().replace(' ', '_')
+        with open(config.word_list) as f:
+            _words = [line.rstrip().lower().replace(' ', '_') for line in f.readlines()]
+        self.words = np.array(_words, dtype='S11')
 
         # Initialize our word embedding model if necessary.
-        self.model = model.WordEmbedding(model_name)
+        self.model = model.WordEmbedding(config.embedding)
 
         # Initialize random numbers.
         self.generator = np.random.RandomState(seed=seed)
@@ -119,8 +119,10 @@ class GameEngine(object):
     def print_board(self, spymaster=False, clear_screen=True):
 
         if clear_screen:
-            sys.stdout.write(chr(27) + '[2J')
-            # os.system('cls||clear')
+            if platform.system() == 'Windows':
+                os.system('cls')
+            else:
+                sys.stdout.write(chr(27) + '[2J')
 
         board = self.board.reshape(self.size, self.size)
         owner = self.owner.reshape(self.size, self.size)
@@ -177,10 +179,17 @@ class GameEngine(object):
             return clue, len(words)
 
     def _should_say_unlimited(self, nb_clue_words, threshold_opponent=2):
-        return (len(self.opponent_words) <= threshold_opponent  # the opposing team risks winning with their next clue, and
-                and nb_clue_words + 1 < len(self.player_words)  # our +1 guess isn't enough to catch up during this clue,
-                # but all the words hinted by the current and previous clues are enough to catch up and win
-                and self.unfound_words[self.player] == set(self.player_words))
+        """
+        Announce "unlimited" if :
+        (1) the opposing team risks winning with their next clue,
+        (2) and our +1 guess isn't enough to catch up during this clue,
+        (3) but all the words hinted by the current and previous clues
+            are enough to catch up and win
+        """
+        return (len(self.opponent_words) <= threshold_opponent  # (1)
+                and nb_clue_words + 1 < len(self.player_words)  # (2)
+                and self.unfound_words[self.player]
+                                    == set(self.player_words))  # (3)
 
     def play_human_spymaster(self):
 

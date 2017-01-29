@@ -1,7 +1,11 @@
+apicache/
 corpus/
+corpus_1.gz
 corpus.txt.gz
 word2vec.dat
 word2vec.dat.*
+freqs.dat
+throttle.ctrl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

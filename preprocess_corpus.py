@@ -2,28 +2,21 @@
 from __future__ import print_function, division
 
 import argparse
-import io
-import glob
+import gzip
 import os.path
 import re
-import random
-import gzip
 
 import nltk.tokenize
 
-from build_corpus import CORPUS_DIRECTORY
+from config import config
 
 
 def main():
     parser = argparse.ArgumentParser(
         description='Preprocess training corpus.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-i', '--input', type=str, default='words.txt',
-                        help='Name of word list to use.')
     parser.add_argument('-o', '--output', type=str, default='freqs.dat',
                         help='Filename for saving word list frequencies.')
-    parser.add_argument('--encoding', type=str, default='utf8',
-                        help='Encoding for reading corpus text.')
     args = parser.parse_args()
 
     heading = re.compile('=+ ([^=]+) =+\s*')
@@ -35,7 +28,7 @@ def main():
     word_list = []
     compound = {}
     total_freq, cross_freq, corpus_stats = {}, {}, {}
-    with open(args.input, 'r') as f:
+    with open(config.word_list, 'r') as f:
         for word in f:
             word_list.append(word.strip().capitalize())
             word = word.strip().lower()
@@ -54,17 +47,17 @@ def main():
 
         freq_key = word.lower().replace(' ', '_')
 
-        in_name = os.path.join(CORPUS_DIRECTORY, '{0}.txt.gz'.format(word))
+        in_name = os.path.join(config.corpus_directory, config.template['articles'].format(word))
         if not os.path.exists(in_name):
             print('Skipping missing file {0}'.format(in_name))
             continue
 
-        out_name = os.path.join(CORPUS_DIRECTORY, '{0}.pre.gz'.format(word))
+        out_name = os.path.join(config.corpus_directory, config.template['preprocess'].format(word))
         num_sentences, num_words = 0, 0
 
         with gzip.open(in_name, 'rb') as f_in:
             # Read the whole file into memory.
-            content = f_in.read().decode(args.encoding)
+            content = f_in.read().decode(config.encoding)
             # Remove headings.
             content = re.sub(heading, '', content)
 
@@ -90,7 +83,7 @@ def main():
                                 cross_freq[w] += 1
                     num_sentences += 1
                     # Save this sentence to the preprocessed output.
-                    f_out.write(line.encode(args.encoding) + '\n')
+                    f_out.write(line.encode(config.encoding) + '\n')
 
         print(word, num_sentences, num_words)
         corpus_stats[freq_key] = (num_sentences, num_words)

@@ -15,6 +15,7 @@ import wikipedia
 from config import config
 
 dry_run = False
+lang = 'en'
 
 
 def fetch(word, min_size=5e6):
@@ -22,8 +23,9 @@ def fetch(word, min_size=5e6):
     # Use a reproducible but different "random" shuffle for each word.
     random.seed(word)
 
-    in_name = os.path.join(config.corpus_directory, config.template['index'].format(word))
-    out_name = os.path.join(config.corpus_directory, config.template['articles'].format(word))
+    localized_directory = config.corpus_directory.format(lang=lang)
+    in_name = os.path.join(localized_directory, config.template['index'].format(word))
+    out_name = os.path.join(localized_directory, config.template['articles'].format(word))
 
     # Has this word already been fetched?
     if os.path.exists(out_name):
@@ -84,7 +86,7 @@ def fetch(word, min_size=5e6):
 
 
 def main():
-    global dry_run
+    global dry_run, lang
     parser = argparse.ArgumentParser(
         description='Fetch indexed training corpus text.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -92,14 +94,20 @@ def main():
                         help='Number of processing pool workers to use.')
     parser.add_argument('--dry-run', action='store_true',
                         help='Perform a dry run only.')
+    parser.add_argument('--lang', type=str, default='en',
+                        help='Language.')
     args = parser.parse_args()
     dry_run = args.dry_run
+    lang = args.lang
+
+    wikipedia.set_lang(args.lang)
 
     # Read the word list into memory and format using wikimedia conventions.
     # https://en.wikipedia.org/wiki/Wikipedia:Naming_conventions_(capitalization)
-    with open(config.word_list, 'r') as f:
+    wordlist = config.word_list.format(lang=args.lang)
+    with io.open(wordlist, 'r', encoding=config.encoding) as f:
         words = [w.strip().capitalize() for w in f]
-    print('Read {0} words from {1}.'.format(len(words), config.word_list))
+    print('Read {0} words from {1}.'.format(len(words), wordlist))
 
     pool = multiprocessing.Pool(processes=args.nproc)
     result = pool.map_async(fetch, words)

@@ -1,11 +1,15 @@
 {
-    "corpus_directory": "corpus",
-    "word_list":        "words.txt",
+    "corpus_directory": "corpus_{lang}",
+    "word_list":        "words_{lang}.txt",
     "embedding":        "word2vec.dat",
     "encoding":         "utf8",
     "template": {
         "index":        "{0}.index",
         "articles":     "{0}.txt.gz",
         "preprocess":   "{0}.pre.gz"
+    },
+    "disambiguation_suffix": {
+        "en":           "(disambiguation)",
+        "fr":           "(homonymie)"
     }
 }
